@@ -1,0 +1,837 @@
+{
+  "info": {
+    "name": "Doscaras API",
+    "description": "REST API for Doscaras (political views / debate platform). Base URL, auth tokens, and entity IDs are stored as collection variables and auto-populated by test scripts on the Auth/Create requests — run requests top-to-bottom on a fresh environment.\n\nFlow: Register -> Activate Account (uses the activationToken returned by Register) -> Login. Registered accounts start as PENDING and cannot log in until activated.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_postman_id": "d0scaras-api-collection-0001"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000", "type": "string" },
+    { "key": "token", "value": "", "type": "string" },
+    { "key": "userId", "value": "", "type": "string" },
+    { "key": "activationToken", "value": "", "type": "string" },
+    { "key": "superadminEmail", "value": "admin@doscaras.dev", "type": "string" },
+    { "key": "superadminPassword", "value": "ChangeMe123!", "type": "string" },
+    { "key": "superadminToken", "value": "", "type": "string" },
+    { "key": "categoryId", "value": "", "type": "string" },
+    { "key": "viewId", "value": "", "type": "string" },
+    { "key": "threadId", "value": "", "type": "string" },
+    { "key": "commentId", "value": "", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/health", "host": ["{{baseUrl}}"], "path": ["health"] }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"jane.doe@example.com\",\n  \"password\": \"SuperSecret123\",\n  \"name\": \"Jane Doe\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/auth/register", "host": ["{{baseUrl}}"], "path": ["api", "auth", "register"] },
+            "description": "New accounts start as PENDING. The response includes activationToken (in a real deployment this would be emailed, not returned) — activate before logging in."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const json = pm.response.json();",
+                  "    pm.collectionVariables.set('userId', json.user && json.user.id);",
+                  "    pm.collectionVariables.set('activationToken', json.activationToken);",
+                  "}",
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Activate Account",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/activate/{{activationToken}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "activate", "{{activationToken}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Login",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"jane.doe@example.com\",\n  \"password\": \"SuperSecret123\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/auth/login", "host": ["{{baseUrl}}"], "path": ["api", "auth", "login"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const json = pm.response.json();",
+                  "    pm.collectionVariables.set('token', json.token);",
+                  "    pm.collectionVariables.set('userId', json.user && json.user.id);",
+                  "}",
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Login (Superadmin)",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{superadminEmail}}\",\n  \"password\": \"{{superadminPassword}}\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/auth/login", "host": ["{{baseUrl}}"], "path": ["api", "auth", "login"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const json = pm.response.json();",
+                  "    pm.collectionVariables.set('superadminToken', json.token);",
+                  "}",
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Get Me",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/auth/me", "host": ["{{baseUrl}}"], "path": ["api", "auth", "me"] }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Categories",
+      "item": [
+        {
+          "name": "List Categories",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/categories", "host": ["{{baseUrl}}"], "path": ["api", "categories"] }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Category By Id",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/categories/{{categoryId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "categories", "{{categoryId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Category",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Economy\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/categories", "host": ["{{baseUrl}}"], "path": ["api", "categories"] },
+            "description": "Note: this public route currently has no auth guard in code — see also Admin > Categories for the SUPERADMIN-gated equivalent that also supports soft delete."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const json = pm.response.json();",
+                  "    pm.collectionVariables.set('categoryId', json.category && json.category.id);",
+                  "}",
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Update Category",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Economy & Trade\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/categories/{{categoryId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "categories", "{{categoryId}}"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Views",
+      "item": [
+        {
+          "name": "List Views",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/views?category={{categoryId}}&sort=recent&page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "views"],
+              "query": [
+                { "key": "category", "value": "{{categoryId}}", "description": "optional categoryId (uuid) filter" },
+                { "key": "hashtag", "value": "", "description": "optional hashtag name filter", "disabled": true },
+                { "key": "sort", "value": "recent", "description": "likes | dislikes | recent" },
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" },
+                { "key": "autorId", "value": "", "description": "optional authorId (uuid) filter", "disabled": true },
+                { "key": "autor", "value": "me", "description": "set to 'me' to filter by the authenticated user (requires auth)", "disabled": true }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create View",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"categoryId\": \"{{categoryId}}\",\n  \"side\": {\n    \"title\": \"Pro free trade\",\n    \"description\": \"Free trade agreements boost overall economic growth.\",\n    \"sources\": [\n      { \"type\": \"LINK\", \"url\": \"https://example.com/article\", \"label\": \"Economist analysis\" }\n    ]\n  },\n  \"counterpart\": {\n    \"title\": \"Protectionism protects jobs\",\n    \"description\": \"Tariffs shield domestic industries from being undercut.\",\n    \"sources\": [\n      { \"type\": \"YOUTUBE\", \"url\": \"https://youtube.com/watch?v=abc123\", \"label\": \"Explainer video\" }\n    ]\n  },\n  \"hashtags\": [\"freetrade\", \"economy\"]\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/views", "host": ["{{baseUrl}}"], "path": ["api", "views"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const json = pm.response.json();",
+                  "    pm.collectionVariables.set('viewId', json.view && json.view.id);",
+                  "}",
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Get View By Id",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/views/{{viewId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "views", "{{viewId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update View",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"categoryId\": \"{{categoryId}}\",\n  \"side\": {\n    \"title\": \"Pro free trade (updated)\",\n    \"description\": \"Free trade agreements boost overall economic growth and consumer choice.\",\n    \"sources\": [\n      { \"type\": \"LINK\", \"url\": \"https://example.com/article\", \"label\": \"Economist analysis\" }\n    ]\n  },\n  \"counterpart\": {\n    \"title\": \"Protectionism protects jobs\",\n    \"description\": \"Tariffs shield domestic industries from being undercut.\",\n    \"sources\": [\n      { \"type\": \"YOUTUBE\", \"url\": \"https://youtube.com/watch?v=abc123\", \"label\": \"Explainer video\" }\n    ]\n  },\n  \"hashtags\": [\"freetrade\"]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/views/{{viewId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "views", "{{viewId}}"]
+            },
+            "description": "Only the author (or SUPERADMIN) may update. Requires the full side/counterpart payload, same as Create."
+          },
+          "response": []
+        },
+        {
+          "name": "Publish View (Superadmin)",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{superadminToken}}", "type": "string" }] },
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/views/{{viewId}}/publish",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "views", "{{viewId}}", "publish"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Unpublish View (Superadmin)",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{superadminToken}}", "type": "string" }] },
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/views/{{viewId}}/unpublish",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "views", "{{viewId}}", "unpublish"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Reactions",
+      "item": [
+        {
+          "name": "Like Side A",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/views/{{viewId}}/sides/a/like",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "views", "{{viewId}}", "sides", "a", "like"]
+            },
+            "description": "side is 'a' (the original side) or 'b' (the counterpart). Liking again while disliked switches the reaction; liking twice is idempotent."
+          },
+          "response": []
+        },
+        {
+          "name": "Dislike Side A",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/views/{{viewId}}/sides/a/dislike",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "views", "{{viewId}}", "sides", "a", "dislike"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Like Side B",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/views/{{viewId}}/sides/b/like",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "views", "{{viewId}}", "sides", "b", "like"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Dislike Side B",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/views/{{viewId}}/sides/b/dislike",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "views", "{{viewId}}", "sides", "b", "dislike"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Favorites",
+      "item": [
+        {
+          "name": "Add Favorite",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/views/{{viewId}}/favorite",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "views", "{{viewId}}", "favorite"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Remove Favorite",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/views/{{viewId}}/favorite",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "views", "{{viewId}}", "favorite"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Threads",
+      "item": [
+        {
+          "name": "List Threads",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/views/{{viewId}}/threads",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "views", "{{viewId}}", "threads"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Thread",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Is free trade good for jobs?\",\n  \"content\": \"I think tariffs hurt consumers more than they help.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/views/{{viewId}}/threads",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "views", "{{viewId}}", "threads"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const json = pm.response.json();",
+                  "    pm.collectionVariables.set('threadId', json.thread && json.thread.id);",
+                  "}",
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Comments",
+      "item": [
+        {
+          "name": "List Comments",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/views/{{viewId}}/threads/{{threadId}}/comments",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "views", "{{viewId}}", "threads", "{{threadId}}", "comments"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Comment",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content\": \"I disagree, tariffs can protect emerging industries.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/views/{{viewId}}/threads/{{threadId}}/comments",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "views", "{{viewId}}", "threads", "{{threadId}}", "comments"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const json = pm.response.json();",
+                  "    pm.collectionVariables.set('commentId', json.comment && json.comment.id);",
+                  "}",
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Create Reply Comment",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content\": \"Emerging industries rarely stay 'emerging' once protected long-term.\",\n  \"parentId\": \"{{commentId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/views/{{viewId}}/threads/{{threadId}}/comments",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "views", "{{viewId}}", "threads", "{{threadId}}", "comments"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Hashtags",
+      "item": [
+        {
+          "name": "List Hashtags",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/hashtags?q=trade",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "hashtags"],
+              "query": [{ "key": "q", "value": "trade", "description": "optional search term" }]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Search",
+      "item": [
+        {
+          "name": "Global Search",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/search?q=trade",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "search"],
+              "query": [{ "key": "q", "value": "trade" }]
+            },
+            "description": "Searches published views (by side title/description, category name, or hashtag), categories, hashtags, and active users, returning up to 20 views / 10 of each other type."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Authors",
+      "item": [
+        {
+          "name": "Get Author By Id",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/authors/{{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "authors", "{{userId}}"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "Get My Favorites",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/users/me/favorites", "host": ["{{baseUrl}}"], "path": ["api", "users", "me", "favorites"] },
+            "description": "Returns an array of favorited politicalViewIds for the authenticated user."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Uploads",
+      "item": [
+        {
+          "name": "Upload Document",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "file", "type": "file", "src": "" }
+              ]
+            },
+            "url": { "raw": "{{baseUrl}}/api/uploads/document", "host": ["{{baseUrl}}"], "path": ["api", "uploads", "document"] },
+            "description": "Field name must be exactly 'file'. Allowed types: application/pdf, application/msword, .docx, text/plain. Max 20MB."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Admin",
+      "item": [
+        {
+          "name": "Users",
+          "item": [
+            {
+              "name": "List Users (Superadmin)",
+              "request": {
+                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{superadminToken}}", "type": "string" }] },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/admin/users?page=1&limit=20",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "admin", "users"],
+                  "query": [
+                    { "key": "search", "value": "", "description": "optional name/email search", "disabled": true },
+                    { "key": "page", "value": "1" },
+                    { "key": "limit", "value": "20" }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Ban User (Superadmin)",
+              "request": {
+                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{superadminToken}}", "type": "string" }] },
+                "method": "PATCH",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/admin/users/{{userId}}/ban",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "admin", "users", "{{userId}}", "ban"]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Unban User (Superadmin)",
+              "request": {
+                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{superadminToken}}", "type": "string" }] },
+                "method": "PATCH",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/admin/users/{{userId}}/unban",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "admin", "users", "{{userId}}", "unban"]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Categories",
+          "item": [
+            {
+              "name": "List Categories (Superadmin)",
+              "request": {
+                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{superadminToken}}", "type": "string" }] },
+                "method": "GET",
+                "header": [],
+                "url": { "raw": "{{baseUrl}}/api/admin/categories", "host": ["{{baseUrl}}"], "path": ["api", "admin", "categories"] },
+                "description": "Includes soft-deleted categories, unlike the public GET /api/categories."
+              },
+              "response": []
+            },
+            {
+              "name": "Create Category (Superadmin)",
+              "request": {
+                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{superadminToken}}", "type": "string" }] },
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Technology\"\n}"
+                },
+                "url": { "raw": "{{baseUrl}}/api/admin/categories", "host": ["{{baseUrl}}"], "path": ["api", "admin", "categories"] }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (pm.response.code === 201) {",
+                      "    const json = pm.response.json();",
+                      "    pm.collectionVariables.set('categoryId', json.category && json.category.id);",
+                      "}",
+                      "pm.test('Status is 201', () => pm.response.to.have.status(201));"
+                    ]
+                  }
+                }
+              ],
+              "response": []
+            },
+            {
+              "name": "Update Category (Superadmin)",
+              "request": {
+                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{superadminToken}}", "type": "string" }] },
+                "method": "PUT",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Technology & Innovation\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/admin/categories/{{categoryId}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "admin", "categories", "{{categoryId}}"]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Delete Category (Superadmin)",
+              "request": {
+                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{superadminToken}}", "type": "string" }] },
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/admin/categories/{{categoryId}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "admin", "categories", "{{categoryId}}"]
+                },
+                "description": "Soft delete (sets deletedAt). Returns 204 No Content."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Views",
+          "item": [
+            {
+              "name": "List Views (Superadmin)",
+              "request": {
+                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{superadminToken}}", "type": "string" }] },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/admin/views?page=1&limit=20",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "admin", "views"],
+                  "query": [
+                    { "key": "status", "value": "UNPUBLISHED", "description": "PUBLISHED | UNPUBLISHED", "disabled": true },
+                    { "key": "page", "value": "1" },
+                    { "key": "limit", "value": "20" }
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

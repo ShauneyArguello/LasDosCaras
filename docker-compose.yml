@@ -1,0 +1,41 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-doscaras}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-doscaras}
+      POSTGRES_DB: ${POSTGRES_DB:-doscaras}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-doscaras}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PORT: 3000
+      DATABASE_URL: postgresql://${POSTGRES_USER:-doscaras}:${POSTGRES_PASSWORD:-doscaras}@db:5432/${POSTGRES_DB:-doscaras}?schema=public
+      JWT_SECRET: ${JWT_SECRET:-change-this-to-a-long-random-secret}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
+      SUPERADMIN_EMAIL: ${SUPERADMIN_EMAIL:-admin@doscaras.dev}
+      SUPERADMIN_PASSWORD: ${SUPERADMIN_PASSWORD:-ChangeMe123!}
+      SUPERADMIN_NAME: ${SUPERADMIN_NAME:-Super Admin}
+      RUN_SEED: ${RUN_SEED:-true}
+    ports:
+      - "3000:3000"
+    volumes:
+      - uploads:/app/uploads
+
+volumes:
+  pgdata:
+  uploads:

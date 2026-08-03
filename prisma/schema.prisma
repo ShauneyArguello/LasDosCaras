@@ -1,0 +1,178 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  SUPERADMIN
+}
+
+enum UserStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
+}
+
+enum ViewStatus {
+  PUBLISHED
+  UNPUBLISHED
+}
+
+enum SideType {
+  SIDE
+  COUNTERPART
+}
+
+enum SourceType {
+  LINK
+  YOUTUBE
+  DOCUMENT
+}
+
+enum ReactionType {
+  LIKE
+  DISLIKE
+}
+
+model User {
+  id              String     @id @default(uuid())
+  email           String     @unique
+  password        String
+  name            String
+  role            Role       @default(USER)
+  status          UserStatus @default(PENDING)
+  activationToken String?    @unique
+  createdAt       DateTime   @default(now())
+
+  politicalViews PoliticalView[]
+  reactions      Reaction[]
+  comments       Comment[]
+  favorites      Favorite[]
+
+  @@map("users")
+}
+
+model Category {
+  id        String    @id @default(uuid())
+  name      String    @unique
+  deletedAt DateTime?
+
+  politicalViews PoliticalView[]
+
+  @@map("categories")
+}
+
+model Hashtag {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
+
+  politicalViews PoliticalView[]
+
+  @@map("hashtags")
+}
+
+model PoliticalView {
+  id         String     @id @default(uuid())
+  categoryId String
+  category   Category   @relation(fields: [categoryId], references: [id])
+  authorId   String
+  author     User       @relation(fields: [authorId], references: [id])
+  status     ViewStatus @default(PUBLISHED)
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+
+  sides     ViewSide[]
+  threads   CommentThread[]
+  hashtags  Hashtag[]
+  favorites Favorite[]
+
+  @@index([categoryId])
+  @@index([status])
+  @@map("political_views")
+}
+
+model ViewSide {
+  id              String        @id @default(uuid())
+  politicalViewId String
+  politicalView   PoliticalView @relation(fields: [politicalViewId], references: [id], onDelete: Cascade)
+  type            SideType
+  title           String
+  description     String
+
+  sources   Source[]
+  reactions Reaction[]
+
+  @@unique([politicalViewId, type])
+  @@map("view_sides")
+}
+
+model Source {
+  id         String     @id @default(uuid())
+  viewSideId String
+  viewSide   ViewSide   @relation(fields: [viewSideId], references: [id], onDelete: Cascade)
+  type       SourceType
+  url        String
+  label      String?
+  createdAt  DateTime   @default(now())
+
+  @@map("sources")
+}
+
+model Reaction {
+  id         String       @id @default(uuid())
+  userId     String
+  user       User         @relation(fields: [userId], references: [id])
+  viewSideId String
+  viewSide   ViewSide     @relation(fields: [viewSideId], references: [id], onDelete: Cascade)
+  type       ReactionType
+  createdAt  DateTime     @default(now())
+
+  @@unique([userId, viewSideId])
+  @@map("reactions")
+}
+
+model Favorite {
+  id              String        @id @default(uuid())
+  userId          String
+  user            User          @relation(fields: [userId], references: [id])
+  politicalViewId String
+  politicalView   PoliticalView @relation(fields: [politicalViewId], references: [id], onDelete: Cascade)
+  createdAt       DateTime      @default(now())
+
+  @@unique([userId, politicalViewId])
+  @@map("favorites")
+}
+
+model CommentThread {
+  id              String        @id @default(uuid())
+  politicalViewId String
+  politicalView   PoliticalView @relation(fields: [politicalViewId], references: [id], onDelete: Cascade)
+  title           String?
+  createdAt       DateTime      @default(now())
+
+  comments Comment[]
+
+  @@map("comment_threads")
+}
+
+model Comment {
+  id        String        @id @default(uuid())
+  threadId  String
+  thread    CommentThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User          @relation(fields: [userId], references: [id])
+  parentId  String?
+  parent    Comment?      @relation("CommentReplies", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  replies   Comment[]     @relation("CommentReplies")
+  content   String
+  createdAt DateTime      @default(now())
+
+  @@index([threadId])
+  @@map("comments")
+}
