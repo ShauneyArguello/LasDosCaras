@@ -38,7 +38,6 @@ prisma/dev.db
 *.db
 
 ### Uploads and runtime files
-uploads/
 tmp/
 .cache/
 
