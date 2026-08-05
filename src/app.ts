@@ -8,7 +8,7 @@ import authRoutes from './modules/auth/auth.routes';
 import categoriesRoutes from './modules/categories/categories.routes';
 import hashtagsRoutes from './modules/hashtags/hashtags.routes';
 import viewsRoutes from './modules/views/views.routes';
-import uploadsRoutes from './modules/uploads/uploads.routes';
+//import uploadsRoutes from './modules/uploads/uploads.routes';
 import usersRoutes from './modules/users/users.routes';
 import searchRoutes from './modules/search/search.routes';
 import authorsRoutes from './modules/authors/authors.routes';
@@ -32,7 +32,7 @@ export function createApp() {
   app.use('/api/categories', categoriesRoutes);
   app.use('/api/hashtags', hashtagsRoutes);
   app.use('/api/views', viewsRoutes);
-  app.use('/api/uploads', uploadsRoutes);
+  //app.use('/api/uploads', uploadsRoutes);
   app.use('/api/users', usersRoutes);
   app.use('/api/search', searchRoutes);
   app.use('/api/authors', authorsRoutes);
