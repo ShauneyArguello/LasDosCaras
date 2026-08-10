@@ -3,8 +3,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 const routes = [
   {
     path: '/',
-    name: 'home',
-    component: () => import('../views/HomeView.vue'),
+    redirect: '/board',
   },
   {
     path: '/board',
@@ -24,6 +23,11 @@ const routes = [
     path: '/register',
     name: 'register',
     component: () => import('../views/RegisterView.vue'),
+  },
+  {
+    path: '/search',
+    name: 'search',
+    component: () => import('../views/SearchResultsView.vue'),
   },
   {
     path: '/views/:id',

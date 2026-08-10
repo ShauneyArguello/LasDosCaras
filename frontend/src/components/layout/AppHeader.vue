@@ -8,17 +8,53 @@
 
       <nav class="top-nav" aria-label="Navegacion superior">
         <RouterLink to="/board">Tablero</RouterLink>
-        <RouterLink to="/profile">Perfil</RouterLink>
+
+        <label class="category-nav">
+          <span class="sr-only">Categorias</span>
+          <select
+            v-model="selectedCategory"
+            aria-label="Categorias"
+            @change="goToCategory"
+          >
+            <option value="">Categorias</option>
+            <option
+              v-for="category in categories"
+              :key="category.id"
+              :value="category.id"
+            >
+              {{ category.name }}
+            </option>
+          </select>
+        </label>
       </nav>
     </div>
 
     <div class="header-right">
-      <button class="theme-button" type="button" @click="themeStore.toggleTheme">
-        {{ themeStore.isDark ? 'Modo claro' : 'Modo oscuro' }}
+      <form class="global-search" role="search" @submit.prevent="submitSearch">
+        <label class="sr-only" for="global-search">Buscar publicaciones</label>
+        <input
+          id="global-search"
+          v-model="searchText"
+          type="search"
+          placeholder="Buscar"
+        />
+        <button type="submit">Buscar</button>
+      </form>
+
+      <button
+        class="theme-button"
+        type="button"
+        :aria-label="themeStore.isDark ? 'Cambiar a tema claro' : 'Cambiar a tema oscuro'"
+        :title="themeStore.isDark ? 'Tema claro' : 'Tema oscuro'"
+        @click="themeStore.toggleTheme"
+      >
+        {{ themeStore.isDark ? '☀' : '☾' }}
       </button>
 
       <template v-if="authStore.token">
-        <span class="user-name">{{ authStore.user?.name ?? 'Usuario' }}</span>
+        <RouterLink to="/profile" class="profile-link">
+          {{ authStore.user?.name ?? 'Perfil' }}
+        </RouterLink>
         <button class="logout-button" type="button" @click="authStore.logout">
           Salir
         </button>
@@ -33,11 +69,92 @@
 </template>
 
 <script setup lang="ts">
+import { onMounted, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+
 import { useAuthStore } from '../../stores/auth'
 import { useThemeStore } from '../../stores/theme'
+import { useDebounce } from '../../composables/useDebounce'
+import { getCategories } from '../../services/categoryService'
+import type { Category } from '../../models/category'
 
 const authStore = useAuthStore()
 const themeStore = useThemeStore()
+const router = useRouter()
+const route = useRoute()
+
+const categories = ref<Category[]>([])
+const selectedCategory = ref('')
+const searchText = ref(String(route.query.q ?? ''))
+const debouncedSearchText = useDebounce(searchText, 300)
+
+async function loadCategories() {
+  try {
+    categories.value = await getCategories()
+  } catch (error) {
+    console.error('Error cargando categorias:', error)
+    categories.value = []
+  }
+}
+
+function goToCategory() {
+  if (!selectedCategory.value) {
+    router.push({ name: 'board' })
+    return
+  }
+
+  router.push({
+    name: 'board',
+    query: {
+      category: selectedCategory.value,
+    },
+  })
+}
+
+function submitSearch() {
+  const query = searchText.value.trim()
+
+  if (!query) {
+    return
+  }
+
+  router.push({
+    name: 'search',
+    query: {
+      q: query,
+    },
+  })
+}
+
+watch(
+  () => route.query.category,
+  (category) => {
+    selectedCategory.value = String(category ?? '')
+  },
+  { immediate: true }
+)
+
+watch(
+  () => route.query.q,
+  (query) => {
+    searchText.value = String(query ?? '')
+  }
+)
+
+watch(debouncedSearchText, (query) => {
+  const value = query.trim()
+
+  if (route.name !== 'search') {
+    return
+  }
+
+  router.replace({
+    name: 'search',
+    query: value ? { q: value } : {},
+  })
+})
+
+onMounted(loadCategories)
 </script>
 
 <style scoped>
@@ -96,6 +213,7 @@ const themeStore = useThemeStore()
 .top-nav a,
 .login-link,
 .register-link,
+.profile-link,
 .theme-button,
 .logout-button {
   min-height: 38px;
@@ -115,6 +233,7 @@ const themeStore = useThemeStore()
 
 .top-nav a:hover,
 .login-link:hover,
+.profile-link:hover,
 .theme-button:hover,
 .logout-button:hover {
   background: var(--surface-muted);
@@ -139,12 +258,67 @@ const themeStore = useThemeStore()
 }
 
 .theme-button {
+  width: 38px;
+  padding: 0;
   border-color: var(--border);
+  font-size: 20px;
+  line-height: 1;
 }
 
-.user-name {
+.category-nav select,
+.global-search input {
+  min-height: 38px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text-primary);
+}
+
+.category-nav select {
+  max-width: 172px;
+  padding: 0 10px;
+  cursor: pointer;
+}
+
+.global-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.global-search input {
+  width: 210px;
+  padding: 0 12px;
+}
+
+.global-search button {
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text-primary);
+  font: inherit;
   font-size: 14px;
-  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.global-search button:hover {
+  background: var(--surface-muted);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 @media (max-width: 760px) {
@@ -174,8 +348,17 @@ const themeStore = useThemeStore()
   .theme-button,
   .login-link,
   .register-link,
+  .profile-link,
   .logout-button {
     flex: 0 1 auto;
+  }
+
+  .global-search,
+  .global-search input,
+  .global-search button,
+  .category-nav,
+  .category-nav select {
+    width: 100%;
   }
 }
 </style>
