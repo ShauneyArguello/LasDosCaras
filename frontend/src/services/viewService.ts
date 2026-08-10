@@ -20,7 +20,7 @@ export interface SearchResult {
 
 export async function getViews(
   filters: ViewFilters = {}
-): Promise<View[]> {
+): Promise<ViewListResponse> {
   const response = await api.get<ViewListResponse>(
     '/api/views',
     {
@@ -28,7 +28,7 @@ export async function getViews(
     }
   )
 
-  return response.data.views
+  return response.data
 }
 
 export async function searchViews(

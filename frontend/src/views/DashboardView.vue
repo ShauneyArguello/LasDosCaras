@@ -18,195 +18,773 @@
         @change="handleCategoryChange"
       />
 
+      <HashtagFilter
+        :hashtags="hashtags"
+        :selected-hashtag="selectedHashtag"
+        @change="handleHashtagChange"
+        @search="handleHashtagSearch"
+      />
+
       <SortSelect @change="handleSortChange" />
     </section>
 
     <!-- Resultados -->
     <section class="results">
-      <p v-if="loading">
-        Cargando publicaciones...
-      </p>
 
-      <p v-else-if="error">
-        {{ error }}
-      </p>
+      <!-- Skeleton de carga -->
+      <div
+        v-if="loading"
+        class="skeleton-grid"
+      >
+        <div
+          v-for="n in 6"
+          :key="n"
+          class="skeleton-card"
+        >
+          <div class="skeleton-line skeleton-title"></div>
+          <div class="skeleton-line"></div>
+          <div class="skeleton-line"></div>
 
+          <div class="skeleton-sides">
+            <div class="skeleton-side"></div>
+            <div class="skeleton-side"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Error -->
+      <div
+        v-else-if="error"
+        class="error-state"
+      >
+        <p>
+          {{ error }}
+        </p>
+
+        <button
+          type="button"
+          @click="loadViews"
+        >
+          Reintentar
+        </button>
+      </div>
+
+      <!-- Sin publicaciones -->
       <p v-else-if="views.length === 0">
         No se encontraron publicaciones.
       </p>
 
-      <div v-else class="views-grid">
+      <!-- Publicaciones -->
+      <div
+        v-else
+        class="views-grid"
+      >
         <ViewCard
           v-for="view in views"
           :key="view.id"
           :view="view"
         />
       </div>
+
+      <!-- Paginación -->
+      <nav
+        v-if="!loading && !error && totalViews > 0"
+        class="pagination"
+        aria-label="Paginación del tablero"
+      >
+        <button
+          type="button"
+          :disabled="!hasPreviousPage"
+          @click="previousPage"
+        >
+          Anterior
+        </button>
+
+        <span>
+          Página {{ currentPage }} de {{ totalPages }}
+        </span>
+
+        <button
+          type="button"
+          :disabled="!hasNextPage"
+          @click="nextPage"
+        >
+          Siguiente
+        </button>
+      </nav>
+
     </section>
   </section>
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import {
+  computed,
+  onMounted,
+  ref,
+} from 'vue'
+
+import {
+  useRoute,
+  useRouter,
+} from 'vue-router'
 
 import SearchInput from '../components/filters/SearchInput.vue'
 import CategoryFilter from '../components/filters/CategoryFilter.vue'
+import HashtagFilter from '../components/filters/HashtagFilter.vue'
 import SortSelect from '../components/filters/SortSelect.vue'
 import ViewCard from '../components/ViewCard.vue'
 
-import { getViews, searchViews } from '../services/viewService'
-import { getCategories } from '../services/categoryService'
+import {
+  getViews,
+  searchViews,
+} from '../services/viewService'
 
-import type { View } from '../models/view'
-import type { Category } from '../models/category'
+import {
+  getCategories,
+} from '../services/categoryService'
+
+import {
+  getHashtags,
+} from '../services/hashtagService'
+
+import type {
+  View,
+} from '../models/view'
+
+import type {
+  Category,
+} from '../models/category'
+
+import type {
+  Hashtag,
+} from '../models/hashtag'
 
 
-// ================================
+// =====================================
+// ROUTER Y URL
+// =====================================
+
+const route = useRoute()
+
+const router = useRouter()
+
+
+// =====================================
+// TIPOS
+// =====================================
+
+type SortOption =
+  | 'recent'
+  | 'sideA'
+  | 'sideB'
+
+
+// =====================================
 // PUBLICACIONES
-// ================================
+// =====================================
 
 const views = ref<View[]>([])
 
+const totalViews = ref(0)
 
-// ================================
+const pageSize = 20
+
+
+// =====================================
 // CATEGORÍAS
-// ================================
+// =====================================
 
 const categories = ref<Category[]>([])
 
 
-// ================================
-// ESTADO DE LA INTERFAZ
-// ================================
+// =====================================
+// HASHTAGS
+// =====================================
+
+const hashtags = ref<Hashtag[]>([])
+
+
+// =====================================
+// ESTADOS DE LA INTERFAZ
+// =====================================
 
 const loading = ref(false)
 
 const error = ref('')
 
 
-// ================================
-// FILTROS
-// ================================
+// =====================================
+// FILTROS DESDE LA URL
+// =====================================
 
-const search = ref('')
+const selectedCategory = ref(
+  typeof route.query.category === 'string'
+    ? route.query.category
+    : ''
+)
 
-const selectedCategory = ref('')
+const selectedHashtag = ref(
+  typeof route.query.hashtag === 'string'
+    ? route.query.hashtag
+    : ''
+)
 
-const selectedSort = ref<'likes' | 'dislikes' | 'recent'>('recent')
+const selectedSort = ref<SortOption>(
+  route.query.sort === 'sideA' ||
+  route.query.sort === 'sideB' ||
+  route.query.sort === 'recent'
+    ? route.query.sort
+    : 'recent'
+)
+
+const currentPage = ref(
+  Number(route.query.page) || 1
+)
+
+const search = ref(
+  typeof route.query.q === 'string'
+    ? route.query.q
+    : ''
+)
 
 
-// ================================
+// =====================================
+// PAGINACIÓN
+// =====================================
+
+const totalPages = computed(() => {
+  return Math.max(
+    1,
+    Math.ceil(
+      totalViews.value /
+      pageSize
+    )
+  )
+})
+
+const hasPreviousPage = computed(
+  () =>
+    currentPage.value > 1
+)
+
+const hasNextPage = computed(
+  () =>
+    currentPage.value <
+    totalPages.value
+)
+
+
+// =====================================
+// ACTUALIZAR QUERY PARAMS
+// =====================================
+
+function updateQueryParams() {
+  router.replace({
+    query: {
+      category:
+        selectedCategory.value ||
+        undefined,
+
+      hashtag:
+        selectedHashtag.value ||
+        undefined,
+
+      sort:
+        selectedSort.value !==
+        'recent'
+          ? selectedSort.value
+          : undefined,
+
+      page:
+        currentPage.value > 1
+          ? String(
+              currentPage.value
+            )
+          : undefined,
+
+      q:
+        search.value ||
+        undefined,
+    },
+  })
+}
+
+
+// =====================================
+// ORDENAR EN FRONTEND
+// =====================================
+
+function sortViews(
+  list: View[]
+): View[] {
+  const sorted =
+    [...list]
+
+  if (
+    selectedSort.value ===
+    'sideA'
+  ) {
+    sorted.sort(
+      (a, b) => {
+        const aSide =
+          a.sides.find(
+            side =>
+              side.type ===
+              'SIDE'
+          )
+
+        const bSide =
+          b.sides.find(
+            side =>
+              side.type ===
+              'SIDE'
+          )
+
+        return (
+          (bSide?.likeCount ?? 0) -
+          (aSide?.likeCount ?? 0)
+        )
+      }
+    )
+  }
+
+  if (
+    selectedSort.value ===
+    'sideB'
+  ) {
+    sorted.sort(
+      (a, b) => {
+        const aSide =
+          a.sides.find(
+            side =>
+              side.type ===
+              'COUNTERPART'
+          )
+
+        const bSide =
+          b.sides.find(
+            side =>
+              side.type ===
+              'COUNTERPART'
+          )
+
+        return (
+          (bSide?.likeCount ?? 0) -
+          (aSide?.likeCount ?? 0)
+        )
+      }
+    )
+  }
+
+  return sorted
+}
+
+
+// =====================================
 // CARGAR PUBLICACIONES
-// ================================
+// =====================================
 
 async function loadViews() {
   loading.value = true
+
   error.value = ''
 
   try {
-    const result = await getViews({
-      category: selectedCategory.value || undefined,
-      sort: selectedSort.value,
-    })
+    const result =
+      await getViews({
+        category:
+          selectedCategory.value ||
+          undefined,
 
-    // Nos aseguramos de que siempre sea un arreglo
-    views.value = result ?? []
+        hashtag:
+          selectedHashtag.value ||
+          undefined,
+
+        sort: 'recent',
+
+        page:
+          currentPage.value,
+
+        limit:
+          pageSize,
+      })
+
+    totalViews.value =
+      result.total
+
+    views.value =
+      sortViews(
+        result.views ?? []
+      )
   } catch (err) {
-    console.error('Error cargando publicaciones:', err)
+    console.error(
+      'Error cargando publicaciones:',
+      err
+    )
 
-    error.value = 'No se pudieron cargar las publicaciones.'
+    error.value =
+      'No se pudieron cargar las publicaciones.'
 
     views.value = []
+
+    totalViews.value = 0
   } finally {
     loading.value = false
   }
 }
 
 
-// ================================
+// =====================================
 // CARGAR CATEGORÍAS
-// ================================
+// =====================================
 
 async function loadCategories() {
   try {
-    const result = await getCategories()
+    const result =
+      await getCategories()
 
-    // Nos aseguramos de que siempre sea un arreglo
-    categories.value = result ?? []
+    categories.value =
+      result ?? []
   } catch (err) {
-    console.error('Error cargando categorías:', err)
+    console.error(
+      'Error cargando categorías:',
+      err
+    )
 
     categories.value = []
   }
 }
 
 
-// ================================
+// =====================================
+// CARGAR HASHTAGS
+// =====================================
+
+async function loadHashtags(
+  query = ''
+) {
+  try {
+    const result =
+      await getHashtags(
+        query
+      )
+
+    hashtags.value =
+      result ?? []
+  } catch (err) {
+    console.error(
+      'Error cargando hashtags:',
+      err
+    )
+
+    hashtags.value = []
+  }
+}
+
+
+// =====================================
 // BÚSQUEDA
-// ================================
+// =====================================
 
-async function handleSearch(query: string) {
-  search.value = query
+async function handleSearch(
+  query: string
+) {
+  search.value =
+    query.trim()
 
-  // Si se borra la búsqueda,
-  // volvemos a cargar todas las publicaciones
-  if (!query.trim()) {
+  currentPage.value = 1
+
+  updateQueryParams()
+
+  if (
+    !search.value
+  ) {
     await loadViews()
     return
   }
 
   loading.value = true
+
   error.value = ''
 
   try {
-    const result = await searchViews(query)
+    const result =
+      await searchViews(
+        search.value
+      )
 
-    // Nos aseguramos de que views siempre sea un arreglo
-    views.value = result?.views ?? []
+    views.value =
+      sortViews(
+        result?.views ?? []
+      )
+
+    totalViews.value =
+      views.value.length
   } catch (err) {
-    console.error('Error buscando publicaciones:', err)
+    console.error(
+      'Error buscando publicaciones:',
+      err
+    )
 
-    error.value = 'No se pudieron buscar las publicaciones.'
+    error.value =
+      'No se pudieron buscar las publicaciones.'
 
     views.value = []
+
+    totalViews.value = 0
   } finally {
     loading.value = false
   }
 }
 
 
-// ================================
+// =====================================
 // CAMBIO DE CATEGORÍA
-// ================================
+// =====================================
 
-async function handleCategoryChange(categoryId: string) {
-  selectedCategory.value = categoryId
+async function handleCategoryChange(
+  categoryId: string
+) {
+  selectedCategory.value =
+    categoryId
+
+  currentPage.value = 1
+
+  updateQueryParams()
 
   await loadViews()
 }
 
 
-// ================================
+// =====================================
+// CAMBIO DE HASHTAG
+// =====================================
+
+async function handleHashtagChange(
+  hashtag: string
+) {
+  selectedHashtag.value =
+    hashtag
+
+  currentPage.value = 1
+
+  updateQueryParams()
+
+  await loadViews()
+}
+
+
+// =====================================
+// BUSCAR SUGERENCIAS DE HASHTAGS
+// =====================================
+
+async function handleHashtagSearch(
+  query: string
+) {
+  await loadHashtags(
+    query
+  )
+}
+
+
+// =====================================
 // CAMBIO DE ORDENAMIENTO
-// ================================
+// =====================================
 
 async function handleSortChange(
-  sort: 'likes' | 'dislikes' | 'recent'
+  sort: SortOption
 ) {
-  selectedSort.value = sort
+  selectedSort.value =
+    sort
+
+  currentPage.value = 1
+
+  updateQueryParams()
 
   await loadViews()
 }
 
 
-// ================================
+// =====================================
+// PÁGINA ANTERIOR
+// =====================================
+
+async function previousPage() {
+  if (
+    !hasPreviousPage.value
+  ) {
+    return
+  }
+
+  currentPage.value -= 1
+
+  updateQueryParams()
+
+  await loadViews()
+}
+
+
+// =====================================
+// PÁGINA SIGUIENTE
+// =====================================
+
+async function nextPage() {
+  if (
+    !hasNextPage.value
+  ) {
+    return
+  }
+
+  currentPage.value += 1
+
+  updateQueryParams()
+
+  await loadViews()
+}
+
+
+// =====================================
 // CARGAR DATOS AL ENTRAR
-// ================================
+// =====================================
 
 onMounted(async () => {
   await Promise.all([
     loadCategories(),
-    loadViews(),
+    loadHashtags(),
   ])
+
+  if (
+    search.value
+  ) {
+    await handleSearch(
+      search.value
+    )
+  } else {
+    await loadViews()
+  }
 })
 </script>
+
+<style scoped>
+
+.filters {
+  display: grid;
+  grid-template-columns: repeat(
+    auto-fit,
+    minmax(220px, 1fr)
+  );
+  gap: 1rem;
+  margin: 1.5rem 0 2rem;
+  padding: 1.25rem;
+  border: 1px solid #26344d;
+  border-radius: 14px;
+  background: #121c2f;
+}
+
+.results {
+  margin-top: 1rem;
+}
+
+.description {
+  color: #cbd5e1;
+  margin-bottom: 1rem;
+}
+
+.skeleton-grid {
+  display: grid;
+  grid-template-columns: repeat(
+    auto-fit,
+    minmax(280px, 1fr)
+  );
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.skeleton-card {
+  padding: 1rem;
+  border-radius: 12px;
+  background: #f3f4f6;
+  animation: pulse 1.5s infinite;
+}
+
+.skeleton-line {
+  height: 14px;
+  margin-bottom: 10px;
+  border-radius: 6px;
+  background: #d1d5db;
+}
+
+.skeleton-title {
+  width: 60%;
+  height: 22px;
+}
+
+.skeleton-sides {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.skeleton-side {
+  height: 90px;
+  border-radius: 8px;
+  background: #d1d5db;
+}
+
+.error-state {
+  padding: 1rem;
+  margin-top: 1rem;
+  border-radius: 10px;
+  background: #fff4f4;
+}
+
+.error-state button {
+  margin-top: 0.75rem;
+  padding: 0.6rem 1rem;
+  cursor: pointer;
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+.pagination button {
+  padding: 0.6rem 1rem;
+  cursor: pointer;
+}
+
+.pagination button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 0.6;
+  }
+
+  50% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0.6;
+  }
+}
+
+@media (max-width: 600px) {
+  .skeleton-sides {
+    grid-template-columns: 1fr;
+  }
+
+  .pagination {
+    flex-wrap: wrap;
+  }
+}
+</style>
