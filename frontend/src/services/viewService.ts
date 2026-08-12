@@ -45,3 +45,23 @@ export async function searchViews(
 
   return response.data
 }
+
+export async function favoriteView(
+  viewId: string
+): Promise<{ isFavorite: boolean }> {
+  const response = await api.post<{ isFavorite: boolean }>(
+    `/api/views/${viewId}/favorite`
+  )
+
+  return response.data
+}
+
+export async function unfavoriteView(
+  viewId: string
+): Promise<{ isFavorite: boolean }> {
+  const response = await api.delete<{ isFavorite: boolean }>(
+    `/api/views/${viewId}/favorite`
+  )
+
+  return response.data
+}
