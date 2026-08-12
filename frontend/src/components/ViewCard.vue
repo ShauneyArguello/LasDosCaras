@@ -1,7 +1,7 @@
 <template>
   <article class="view-card">
     <div class="view-header">
-      <span class="category">
+      <span class="category-badge">
         {{ view.category.name }}
       </span>
 
@@ -14,8 +14,24 @@
       {{ sideA?.title || 'Sin título' }}
     </h2>
 
-    <div class="author">
+    <RouterLink
+      :to="`/authors/${view.author.id}`"
+      class="author-link"
+    >
       Por {{ view.author.name }}
+    </RouterLink>
+
+    <div
+      v-if="view.hashtags?.length"
+      class="hashtags"
+    >
+      <span
+        v-for="hashtag in view.hashtags"
+        :key="hashtag.id"
+        class="hashtag"
+      >
+        #{{ hashtag.name }}
+      </span>
     </div>
 
     <div class="sides">
@@ -25,6 +41,10 @@
         <p>
           {{ sideA?.description || 'Sin descripción disponible.' }}
         </p>
+
+        <span class="side-likes">
+          👍 {{ sideA?.likeCount ?? 0 }}
+        </span>
       </section>
 
       <section class="side side-b">
@@ -33,35 +53,72 @@
         <p>
           {{ sideB?.description || 'Sin descripción disponible.' }}
         </p>
+
+        <span class="side-likes">
+          👍 {{ sideB?.likeCount ?? 0 }}
+        </span>
       </section>
     </div>
 
-    <div class="view-stats">
-      <span>
-        👍 {{ view.totalLikes ?? 0 }}
-      </span>
+    <div class="card-actions">
+      <button
+        v-if="authStore.isAuthenticated"
+        type="button"
+        class="favorite-button"
+        :class="{ active: isFavorite }"
+        :disabled="favoriteLoading"
+        @click="toggleFavorite"
+        :aria-label="isFavorite ? 'Quitar de favoritos' : 'Agregar a favoritos'"
+      >
+        {{ isFavorite ? '♥' : '♡' }}
+      </button>
 
-      <span>
-        👎 {{ view.totalDislikes ?? 0 }}
-      </span>
+      <button
+        type="button"
+        class="share-button"
+        @click="shareView"
+      >
+        Compartir
+      </button>
+
+      <RouterLink
+        :to="`/views/${view.id}`"
+        class="detail-button"
+      >
+        Ver detalle
+      </RouterLink>
     </div>
 
-    <RouterLink
-      :to="`/views/${view.id}`"
-      class="detail-button"
+    <p
+      v-if="shareMessage"
+      class="share-message"
     >
-      Ver detalle
-    </RouterLink>
+      {{ shareMessage }}
+    </p>
   </article>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import type { View } from '../models/view'
+import {
+  favoriteView,
+  unfavoriteView,
+} from '../services/viewService'
+import { useAuthStore } from '../stores/auth'
 
 const props = defineProps<{
   view: View
 }>()
+
+const authStore = useAuthStore()
+
+const favoriteLoading = ref(false)
+const shareMessage = ref('')
+
+const isFavorite = ref(
+  props.view.isFavorite ?? false
+)
 
 const sideA = computed(() =>
   props.view.sides.find(
@@ -84,4 +141,301 @@ const formattedDate = computed(() => {
     props.view.createdAt
   ).toLocaleDateString()
 })
+
+function getStoredFavorites(): string[] {
+  const stored = localStorage.getItem(
+    'lasdoscaras_favorites'
+  )
+
+  if (!stored) {
+    return []
+  }
+
+  try {
+    return JSON.parse(stored)
+  } catch {
+    return []
+  }
+}
+
+function saveStoredFavorites(
+  favorites: string[]
+) {
+  localStorage.setItem(
+    'lasdoscaras_favorites',
+    JSON.stringify(favorites)
+  )
+}
+
+function addFavoriteToStorage() {
+  const favorites = getStoredFavorites()
+
+  if (!favorites.includes(props.view.id)) {
+    favorites.push(props.view.id)
+  }
+
+  saveStoredFavorites(favorites)
+}
+
+function removeFavoriteFromStorage() {
+  const favorites = getStoredFavorites().filter(
+    id => id !== props.view.id
+  )
+
+  saveStoredFavorites(favorites)
+}
+
+async function toggleFavorite() {
+  if (
+    !authStore.isAuthenticated ||
+    favoriteLoading.value
+  ) {
+    return
+  }
+
+  favoriteLoading.value = true
+
+  try {
+    if (isFavorite.value) {
+      await unfavoriteView(props.view.id)
+
+      isFavorite.value = false
+
+      removeFavoriteFromStorage()
+    } else {
+      await favoriteView(props.view.id)
+
+      isFavorite.value = true
+
+      addFavoriteToStorage()
+    }
+  } catch (error) {
+    console.error(
+      'Error actualizando favorito:',
+      error
+    )
+  } finally {
+    favoriteLoading.value = false
+  }
+}
+
+async function shareView() {
+  const url =
+    `${window.location.origin}/views/${props.view.id}`
+
+  const title =
+    sideA.value?.title || 'Publicación'
+
+  try {
+    if (navigator.share) {
+      await navigator.share({
+        title,
+        url,
+      })
+
+      return
+    }
+
+    await navigator.clipboard.writeText(url)
+
+    shareMessage.value =
+      'Enlace copiado'
+
+    setTimeout(() => {
+      shareMessage.value = ''
+    }, 2000)
+  } catch (error) {
+    console.error(
+      'No se pudo compartir:',
+      error
+    )
+  }
+}
+
+onMounted(() => {
+  if (!authStore.isAuthenticated) {
+    return
+  }
+
+  const favorites = getStoredFavorites()
+
+  if (
+    props.view.isFavorite ||
+    favorites.includes(props.view.id)
+  ) {
+    isFavorite.value = true
+    addFavoriteToStorage()
+  }
+})
 </script>
+
+<style scoped>
+.view-card {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.25rem;
+  border: 1px solid #26344d;
+  border-radius: 16px;
+  background: #121c2f;
+}
+
+.view-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.category-badge {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  background: #2563eb;
+  color: white;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.date {
+  color: #94a3b8;
+  font-size: 0.85rem;
+}
+
+.view-card h2 {
+  margin: 0;
+  color: #f8fafc;
+}
+
+.author-link {
+  width: fit-content;
+  color: #60a5fa;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.author-link:hover {
+  text-decoration: underline;
+}
+
+.hashtags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.hashtag {
+  padding: 0.25rem 0.55rem;
+  border-radius: 999px;
+  background: #1e293b;
+  color: #93c5fd;
+  font-size: 0.8rem;
+}
+
+.sides {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.side {
+  padding: 1rem;
+  border-radius: 12px;
+  background: #17233a;
+}
+
+.side h3 {
+  margin-top: 0;
+  color: #f8fafc;
+}
+
+.side p {
+  color: #cbd5e1;
+}
+
+.side-likes {
+  display: inline-block;
+  margin-top: 0.75rem;
+  color: #e2e8f0;
+  font-weight: 700;
+}
+
+.card-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.favorite-button,
+.share-button {
+  min-height: 42px;
+  padding: 0.65rem 1rem;
+  border: 1px solid #334155;
+  border-radius: 10px;
+  background: #1e293b;
+  color: white;
+  cursor: pointer;
+}
+
+.favorite-button {
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.favorite-button.active {
+  color: #ef4444;
+}
+
+.favorite-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.detail-button {
+  min-height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 1rem;
+  border-radius: 10px;
+  background: #2563eb;
+  color: white;
+  text-decoration: none;
+  font-weight: 700;
+}
+
+.share-message {
+  margin: 0;
+  color: #86efac;
+  font-size: 0.85rem;
+}
+
+@media (max-width: 600px) {
+  .sides {
+    grid-template-columns: 1fr;
+  }
+
+  .view-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .card-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .detail-button,
+  .share-button {
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .favorite-button {
+    align-self: flex-start;
+  }
+}
+</style>
