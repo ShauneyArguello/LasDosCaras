@@ -45,3 +45,20 @@ tmp/
 *.pem
 *.key
 *.crt
+
+# API / Backend - no subir al repositorio
+/src/
+/prisma/
+/postman/
+/uploads/
+/doscaras/
+
+/Dockerfile
+/docker-compose.yml
+/docker-entrypoint.sh
+/package.json
+/package-lock.json
+/tsconfig.json
+
+# Archivos generados en la raiz
+/.vite/
