@@ -3,50 +3,82 @@
     <p class="eyebrow">Cuenta nueva</p>
     <h1>Registro</h1>
 
-    <form class="auth-form" @submit.prevent="handleSubmit">
+    <form class="auth-form" novalidate @submit.prevent="handleSubmit">
       <BaseInput
         id="name"
         v-model="form.name"
         label="Nombre completo"
         placeholder="Tu nombre completo"
+        autocomplete="name"
+        required
+        :minlength="3"
+        :aria-invalid="Boolean(fieldErrors.name)"
+        :aria-describedby="fieldErrors.name ? 'name-error' : undefined"
+        @update:model-value="fieldErrors.name = ''"
       />
-      <p v-if="fieldErrors.name" class="field-error">
+      <p v-if="fieldErrors.name" id="name-error" class="field-error">
         {{ fieldErrors.name }}
       </p>
 
       <BaseInput
         id="email"
         v-model="form.email"
-        label="Correo electronico"
+        label="Correo electrónico"
         type="email"
         placeholder="correo@ejemplo.com"
+        autocomplete="email"
+        required
+        :aria-invalid="Boolean(fieldErrors.email)"
+        :aria-describedby="fieldErrors.email ? 'email-error' : undefined"
+        @update:model-value="fieldErrors.email = ''"
       />
-      <p v-if="fieldErrors.email" class="field-error">
+      <p v-if="fieldErrors.email" id="email-error" class="field-error">
         {{ fieldErrors.email }}
       </p>
 
       <BaseInput
         id="password"
         v-model="form.password"
-        label="Contrasena"
+        label="Contraseña"
         type="password"
-        placeholder="Minimo 8 caracteres"
+        placeholder="Mínimo 8 caracteres"
+        autocomplete="new-password"
+        required
+        :minlength="8"
+        :aria-invalid="Boolean(fieldErrors.password)"
+        aria-describedby="password-strength password-error"
+        @update:model-value="fieldErrors.password = ''"
       />
-      <p class="password-strength" :class="passwordStrengthClass">
-        Fortaleza: {{ passwordStrengthLabel }}
-      </p>
-      <p v-if="fieldErrors.password" class="field-error">
+      <div
+        id="password-strength"
+        class="password-strength"
+        :class="passwordStrengthClass"
+        role="status"
+        aria-live="polite"
+      >
+        <span>Fortaleza: {{ passwordStrengthLabel }}</span>
+        <span class="password-strength__bars" aria-hidden="true">
+          <i v-for="level in 4" :key="level" :class="{ active: level <= passwordStrength }" />
+        </span>
+      </div>
+      <p v-if="fieldErrors.password" id="password-error" class="field-error">
         {{ fieldErrors.password }}
       </p>
 
       <BaseInput
         id="confirm-password"
         v-model="form.confirmPassword"
-        label="Confirmar contrasena"
+        label="Confirmar contraseña"
         type="password"
-        placeholder="Repite tu contrasena"
+        placeholder="Repite tu contraseña"
+        autocomplete="new-password"
+        required
+        :minlength="8"
+        :aria-invalid="Boolean(fieldErrors.confirmPassword)"
+        :aria-describedby="fieldErrors.confirmPassword ? 'confirm-password-error' : undefined"
+        @update:model-value="fieldErrors.confirmPassword = ''"
       />
-      <p v-if="fieldErrors.confirmPassword" class="field-error">
+      <p v-if="fieldErrors.confirmPassword" id="confirm-password-error" class="field-error">
         {{ fieldErrors.confirmPassword }}
       </p>
 
@@ -59,11 +91,11 @@
       </p>
 
       <BaseButton type="submit" :disabled="isSubmitting">
-        {{ isSubmitting ? 'Registrando...' : 'Registrarse' }}
+        {{ isSubmitting ? 'Registrando…' : 'Registrarse' }}
       </BaseButton>
 
       <RouterLink class="auth-link" to="/login">
-        Ya tienes cuenta? Inicia sesion
+        ¿Ya tienes cuenta? Inicia sesión
       </RouterLink>
     </form>
   </section>
@@ -112,7 +144,7 @@ const passwordStrength = computed(() => {
 
 const passwordStrengthLabel = computed(() => {
   if (!form.password) return 'sin completar'
-  if (passwordStrength.value <= 1) return 'debil'
+  if (passwordStrength.value <= 1) return 'débil'
   if (passwordStrength.value <= 3) return 'media'
   return 'fuerte'
 })
@@ -141,17 +173,17 @@ function validateForm() {
   }
 
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
-    fieldErrors.email = 'Ingresa un correo electronico valido.'
+    fieldErrors.email = 'Ingresa un correo electrónico válido.'
     isValid = false
   }
 
   if (form.password.length < 8) {
-    fieldErrors.password = 'La contrasena debe tener al menos 8 caracteres.'
+    fieldErrors.password = 'La contraseña debe tener al menos 8 caracteres.'
     isValid = false
   }
 
   if (form.confirmPassword !== form.password) {
-    fieldErrors.confirmPassword = 'Las contrasenas no coinciden.'
+    fieldErrors.confirmPassword = 'Las contraseñas no coinciden.'
     isValid = false
   }
 
@@ -169,16 +201,22 @@ function applyApiErrors(error: unknown) {
   const data = error.response?.data
 
   if (status === 409) {
-    fieldErrors.email = 'El correo ya esta registrado.'
+    fieldErrors.email = 'El correo ya está registrado.'
     return
   }
 
   if (status === 400 || status === 422) {
-    fieldErrors.name = data?.errors?.name ?? ''
-    fieldErrors.email = data?.errors?.email ?? ''
-    fieldErrors.password = data?.errors?.password ?? ''
+    const apiFields = data?.details?.fieldErrors ?? data?.errors ?? {}
+    const firstError = (value: string | string[] | undefined) =>
+      Array.isArray(value) ? (value[0] ?? '') : (value ?? '')
+
+    fieldErrors.name = firstError(apiFields.name)
+    fieldErrors.email = firstError(apiFields.email)
+    fieldErrors.password = firstError(apiFields.password)
     errorMessage.value =
-      data?.message ?? data?.error ?? 'Revisa los datos del formulario.'
+      data?.error === 'Validation failed'
+        ? 'Revisa los datos indicados en el formulario.'
+        : data?.message ?? data?.error ?? 'Revisa los datos del formulario.'
     return
   }
 
@@ -277,21 +315,48 @@ async function handleSubmit() {
 }
 
 .password-strength {
-  margin: 0;
+  display: grid;
+  gap: 6px;
+  margin: 0 0 2px;
   color: var(--text-secondary);
   font-size: 13px;
+}
+
+.password-strength__bars {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+
+.password-strength__bars i {
+  height: 5px;
+  border-radius: 999px;
+  background: var(--border);
+  transition: background-color 180ms ease;
 }
 
 .password-strength--weak {
   color: #dc2626;
 }
 
+.password-strength--weak .active {
+  background: #dc2626;
+}
+
 .password-strength--medium {
   color: #ca8a04;
 }
 
+.password-strength--medium .active {
+  background: #ca8a04;
+}
+
 .password-strength--strong {
   color: #16a34a;
+}
+
+.password-strength--strong .active {
+  background: #16a34a;
 }
 
 .auth-link {

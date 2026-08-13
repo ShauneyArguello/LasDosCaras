@@ -6,6 +6,7 @@
 
     <input
       :id="id"
+      v-bind="$attrs"
       :type="type"
       :placeholder="placeholder"
       :value="modelValue"
@@ -15,6 +16,8 @@
 </template>
 
 <script setup lang="ts">
+defineOptions({ inheritAttrs: false })
+
 defineProps<{
   id: string
   label?: string
@@ -47,12 +50,18 @@ function updateValue(event: Event) {
 
 .input-group input {
   padding: 10px 12px;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--border);
   border-radius: 8px;
+  background: var(--surface);
+  color: var(--text-primary);
   outline: none;
 }
 
 .input-group input:focus {
-  border-color: #2563eb;
+  border-color: var(--accent);
+}
+
+.input-group input[aria-invalid='true'] {
+  border-color: #dc2626;
 }
 </style>
