@@ -55,3 +55,11 @@ export async function loginUser(payload: LoginPayload) {
     user,
   }
 }
+
+export async function getFavoriteIds() {
+  const response = await api.get<{ favorites: string[] }>(
+    '/api/users/me/favorites'
+  )
+
+  return response.data.favorites ?? []
+}
