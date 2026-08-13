@@ -53,7 +53,7 @@
 
       <template v-if="authStore.token">
         <RouterLink to="/profile" class="profile-link">
-          {{ authStore.user?.name ?? 'Perfil' }}
+          {{ authStore.user?.nombre ?? authStore.user?.name ?? 'Perfil' }}
         </RouterLink>
         <button class="logout-button" type="button" @click="authStore.logout">
           Salir
