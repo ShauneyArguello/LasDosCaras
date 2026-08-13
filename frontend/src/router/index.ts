@@ -18,11 +18,13 @@ const routes = [
     path: '/login',
     name: 'login',
     component: () => import('../views/LoginView.vue'),
+    meta: { guestOnly: true },
   },
   {
     path: '/register',
     name: 'register',
     component: () => import('../views/RegisterView.vue'),
+    meta: { guestOnly: true },
   },
   {
     path: '/search',
@@ -66,6 +68,14 @@ const routes = [
 const router = createRouter({
   history: createWebHistory(),
   routes,
+})
+
+router.beforeEach((to) => {
+  const isAuthenticated = Boolean(localStorage.getItem('token'))
+
+  if (to.meta.guestOnly && isAuthenticated) {
+    return { name: 'board' }
+  }
 })
 
 export default router
