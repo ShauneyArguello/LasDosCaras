@@ -40,16 +40,19 @@ const routes = [
     path: '/profile',
     name: 'profile',
     component: () => import('../views/ProfileView.vue'),
+    meta: { requiresAuth: true },
   },
   {
     path: '/admin/users',
     name: 'admin-users',
     component: () => import('../views/AdminUsersView.vue'),
+    meta: { requiresAuth: true },
   },
   {
     path: '/admin/categories',
     name: 'admin-categories',
     component: () => import('../views/AdminCategoriesView.vue'),
+    meta: { requiresAuth: true },
   },
 
   {
@@ -72,6 +75,13 @@ const router = createRouter({
 
 router.beforeEach((to) => {
   const isAuthenticated = Boolean(localStorage.getItem('token'))
+
+  if (to.meta.requiresAuth && !isAuthenticated) {
+    return {
+      name: 'login',
+      query: { redirect: to.fullPath },
+    }
+  }
 
   if (to.meta.guestOnly && isAuthenticated) {
     return { name: 'board' }
