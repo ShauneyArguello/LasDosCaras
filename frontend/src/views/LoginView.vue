@@ -1,17 +1,22 @@
 <template>
   <section class="auth-page">
     <p class="eyebrow">Acceso</p>
-    <h1>Login</h1>
+    <h1>Iniciar sesión</h1>
 
-    <form class="auth-form" @submit.prevent="handleSubmit">
+    <form class="auth-form" novalidate :aria-busy="isSubmitting" @submit.prevent="handleSubmit">
       <BaseInput
         id="login-email"
         v-model="form.email"
-        label="Correo electronico"
+        label="Correo electrónico"
         type="email"
         placeholder="correo@ejemplo.com"
+        autocomplete="email"
+        required
+        :aria-invalid="Boolean(fieldErrors.email)"
+        :aria-describedby="fieldErrors.email ? 'login-email-error' : undefined"
+        @update:model-value="fieldErrors.email = ''"
       />
-      <p v-if="fieldErrors.email" class="field-error">
+      <p v-if="fieldErrors.email" id="login-email-error" class="field-error">
         {{ fieldErrors.email }}
       </p>
 
@@ -19,19 +24,26 @@
         <BaseInput
           id="login-password"
           v-model="form.password"
-          label="Contrasena"
+          label="Contraseña"
           :type="showPassword ? 'text' : 'password'"
-          placeholder="Tu contrasena"
+          placeholder="Tu contraseña"
+          autocomplete="current-password"
+          required
+          :aria-invalid="Boolean(fieldErrors.password)"
+          :aria-describedby="fieldErrors.password ? 'login-password-error' : undefined"
+          @update:model-value="fieldErrors.password = ''"
         />
         <button
           class="toggle-password"
           type="button"
+          :aria-pressed="showPassword"
+          aria-controls="login-password"
           @click="showPassword = !showPassword"
         >
           {{ showPassword ? 'Ocultar' : 'Mostrar' }}
         </button>
       </div>
-      <p v-if="fieldErrors.password" class="field-error">
+      <p v-if="fieldErrors.password" id="login-password-error" class="field-error">
         {{ fieldErrors.password }}
       </p>
 
@@ -40,11 +52,11 @@
       </p>
 
       <BaseButton type="submit" :disabled="isSubmitting">
-        {{ isSubmitting ? 'Iniciando...' : 'Iniciar sesion' }}
+        {{ isSubmitting ? 'Iniciando…' : 'Iniciar sesión' }}
       </BaseButton>
 
       <RouterLink class="auth-link" to="/register">
-        No tienes cuenta? Registrate
+        ¿No tienes cuenta? Regístrate
       </RouterLink>
     </form>
   </section>
@@ -53,13 +65,14 @@
 <script setup lang="ts">
 import axios from 'axios'
 import { reactive, ref } from 'vue'
-import { RouterLink, useRouter } from 'vue-router'
+import { RouterLink, useRoute, useRouter } from 'vue-router'
 import BaseButton from '../components/common/BaseButton.vue'
 import BaseInput from '../components/common/BaseInput.vue'
-import { loginUser } from '../services/authService'
+import { getFavoriteIds, loginUser } from '../services/authService'
 import { useAuthStore } from '../stores/auth'
 
 const router = useRouter()
+const route = useRoute()
 const authStore = useAuthStore()
 
 const form = reactive({
@@ -86,12 +99,12 @@ function validateForm() {
   let isValid = true
 
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
-    fieldErrors.email = 'Ingresa un correo electronico valido.'
+    fieldErrors.email = 'Ingresa un correo electrónico válido.'
     isValid = false
   }
 
   if (!form.password) {
-    fieldErrors.password = 'Ingresa tu contrasena.'
+    fieldErrors.password = 'Ingresa tu contraseña.'
     isValid = false
   }
 
@@ -101,7 +114,7 @@ function validateForm() {
 function applyApiErrors(error: unknown) {
   if (!axios.isAxiosError(error)) {
     errorMessage.value =
-      error instanceof Error ? error.message : 'No se pudo iniciar sesion.'
+      error instanceof Error ? error.message : 'No se pudo iniciar sesión.'
     return
   }
 
@@ -109,15 +122,20 @@ function applyApiErrors(error: unknown) {
   const data = error.response?.data
 
   if (status === 401) {
-    errorMessage.value = 'Correo o contrasena incorrectos.'
+    errorMessage.value = 'Correo o contraseña incorrectos.'
     return
   }
 
   if (status === 403) {
-    errorMessage.value =
-      data?.message === 'Account is pending activation'
-        ? 'La cuenta esta pendiente de activacion.'
-        : 'No tienes permiso para iniciar sesion.'
+    const serverMessage = data?.error ?? data?.message
+
+    if (serverMessage === 'Account is pending activation') {
+      errorMessage.value = 'La cuenta está pendiente de activación.'
+    } else if (serverMessage === 'Account is suspended') {
+      errorMessage.value = 'La cuenta está suspendida.'
+    } else {
+      errorMessage.value = 'No tienes permiso para iniciar sesión.'
+    }
     return
   }
 
@@ -143,11 +161,26 @@ async function handleSubmit() {
     })
 
     if (!token) {
-      throw new Error('El servidor no devolvio un token.')
+      throw new Error('El servidor no devolvió un token.')
     }
 
     authStore.setAuth(token, user)
-    await router.push('/board')
+
+    try {
+      authStore.setFavorites(await getFavoriteIds())
+    } catch (favoritesError) {
+      console.warn('No se pudieron cargar los favoritos:', favoritesError)
+      authStore.setFavorites([])
+    }
+
+    const requestedDestination =
+      typeof route.query.redirect === 'string' &&
+      route.query.redirect.startsWith('/') &&
+      !route.query.redirect.startsWith('//')
+        ? route.query.redirect
+        : '/board'
+
+    await router.push(requestedDestination)
   } catch (error) {
     applyApiErrors(error)
   } finally {
