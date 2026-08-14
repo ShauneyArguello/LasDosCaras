@@ -52,6 +52,9 @@
       </button>
 
       <template v-if="authStore.token">
+        <RouterLink to="/views/new" class="create-link">
+          Nueva publicacion
+        </RouterLink>
         <RouterLink to="/profile" class="profile-link">
           {{ authStore.user?.nombre ?? authStore.user?.name ?? 'Perfil' }}
         </RouterLink>
@@ -213,6 +216,7 @@ onMounted(loadCategories)
 .top-nav a,
 .login-link,
 .register-link,
+.create-link,
 .profile-link,
 .theme-button,
 .logout-button {
@@ -233,6 +237,7 @@ onMounted(loadCategories)
 
 .top-nav a:hover,
 .login-link:hover,
+.create-link:hover,
 .profile-link:hover,
 .theme-button:hover,
 .logout-button:hover {
@@ -246,13 +251,15 @@ onMounted(loadCategories)
   font-weight: 700;
 }
 
-.register-link {
+.register-link,
+.create-link {
   background: var(--accent);
   color: #ffffff;
   font-weight: 700;
 }
 
-.register-link:hover {
+.register-link:hover,
+.create-link:hover {
   background: var(--accent-strong);
   color: #ffffff;
 }
@@ -348,6 +355,7 @@ onMounted(loadCategories)
   .theme-button,
   .login-link,
   .register-link,
+  .create-link,
   .profile-link,
   .logout-button {
     flex: 0 1 auto;
