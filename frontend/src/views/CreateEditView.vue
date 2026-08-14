@@ -2,25 +2,39 @@
   <section class="publish-page">
     <div class="page-heading">
       <p class="eyebrow">Publicaciones</p>
-      <h1>{{ isEditing ? 'Editar publicacion' : 'Crear publicacion' }}</h1>
+      <h1>{{ isEditing ? 'Editar publicación' : 'Crear publicación' }}</h1>
       <p>
         Completa ambas caras del tema con fuentes independientes para cada lado.
       </p>
     </div>
 
-    <div v-if="isLoading" class="state-card">
+    <div v-if="isLoading" class="state-card" role="status" aria-live="polite">
       Cargando formulario...
     </div>
 
-    <div v-else-if="loadError" class="state-card state-card--error">
+    <div
+      v-else-if="loadError"
+      class="state-card state-card--error"
+      role="alert"
+    >
       <p>{{ loadError }}</p>
       <button type="button" @click="loadInitialData">
         Reintentar
       </button>
     </div>
 
-    <form v-else class="publish-form" @submit.prevent="handleSubmit">
-      <p v-if="submitError" class="auth-message auth-message--error">
+    <form
+      v-else
+      class="publish-form"
+      novalidate
+      :aria-busy="isSubmitting"
+      @submit.prevent="handleSubmit"
+    >
+      <p
+        v-if="submitError"
+        class="auth-message auth-message--error"
+        role="alert"
+      >
         {{ submitError }}
       </p>
 
@@ -30,22 +44,42 @@
             <BaseInput
               id="publication-title"
               v-model="form.title"
-              label="Titulo de la publicacion"
+              label="Título de la publicación"
+              required
               maxlength="120"
-              placeholder="Ej: Reforma educativa nacional"
+              autocomplete="off"
+              placeholder="Ej.: Reforma educativa nacional"
+              :aria-invalid="Boolean(fieldErrors.title)"
+              :aria-describedby="fieldErrors.title ? 'publication-title-error' : 'publication-title-counter'"
+              @input="fieldErrors.title = ''"
             />
-            <p class="counter" :class="{ 'counter--limit': titleCount > 120 }">
+            <p
+              id="publication-title-counter"
+              class="counter"
+              :class="{ 'counter--limit': titleCount >= 120 }"
+            >
               {{ titleCount }} / 120 caracteres
             </p>
-            <p v-if="fieldErrors.title" class="field-error">
+            <p
+              v-if="fieldErrors.title"
+              id="publication-title-error"
+              class="field-error"
+            >
               {{ fieldErrors.title }}
             </p>
           </div>
 
-          <label class="field-group">
-            <span>Categoria</span>
-            <select v-model="form.categoryId" :aria-invalid="Boolean(fieldErrors.categoryId)">
-              <option value="">Selecciona una categoria</option>
+          <label class="field-group" for="publication-category">
+            <span>Categoría</span>
+            <select
+              id="publication-category"
+              v-model="form.categoryId"
+              required
+              :aria-invalid="Boolean(fieldErrors.categoryId)"
+              :aria-describedby="fieldErrors.categoryId ? 'publication-category-error' : undefined"
+              @change="fieldErrors.categoryId = ''"
+            >
+              <option value="">Selecciona una categoría</option>
               <option
                 v-for="category in categories"
                 :key="category.id"
@@ -54,7 +88,11 @@
                 {{ category.name }}
               </option>
             </select>
-            <small v-if="fieldErrors.categoryId" class="field-error">
+            <small
+              v-if="fieldErrors.categoryId"
+              id="publication-category-error"
+              class="field-error"
+            >
               {{ fieldErrors.categoryId }}
             </small>
           </label>
@@ -70,25 +108,39 @@
         <BaseInput
           id="side-title"
           v-model="form.side.title"
-          label="Titulo descriptivo de la postura"
-          placeholder="Titulo del Lado A"
+          label="Título descriptivo de la postura"
+          required
+          autocomplete="off"
+          placeholder="Título del Lado A"
+          :aria-invalid="Boolean(fieldErrors.sideTitle)"
+          :aria-describedby="fieldErrors.sideTitle ? 'side-title-error' : undefined"
+          @input="fieldErrors.sideTitle = ''"
         />
-        <p v-if="fieldErrors.sideTitle" class="field-error">
+        <p v-if="fieldErrors.sideTitle" id="side-title-error" class="field-error">
           {{ fieldErrors.sideTitle }}
         </p>
 
-        <label class="field-group">
+        <label class="field-group" for="side-description">
           <span>Argumento principal</span>
           <textarea
+            id="side-description"
             v-model="form.side.description"
+            required
+            minlength="100"
             rows="7"
-            placeholder="Escribe minimo 100 caracteres..."
+            placeholder="Escribe mínimo 100 caracteres..."
             :aria-invalid="Boolean(fieldErrors.sideDescription)"
+            :aria-describedby="fieldErrors.sideDescription ? 'side-description-error' : 'side-description-counter'"
+            @input="fieldErrors.sideDescription = ''"
           />
-          <small>
+          <small id="side-description-counter">
             {{ form.side.description.length }} caracteres
           </small>
-          <small v-if="fieldErrors.sideDescription" class="field-error">
+          <small
+            v-if="fieldErrors.sideDescription"
+            id="side-description-error"
+            class="field-error"
+          >
             {{ fieldErrors.sideDescription }}
           </small>
         </label>
@@ -111,25 +163,43 @@
         <BaseInput
           id="counterpart-title"
           v-model="form.counterpart.title"
-          label="Titulo descriptivo de la contrapostura"
-          placeholder="Titulo del Lado B"
+          label="Título descriptivo de la contrapostura"
+          required
+          autocomplete="off"
+          placeholder="Título del Lado B"
+          :aria-invalid="Boolean(fieldErrors.counterpartTitle)"
+          :aria-describedby="fieldErrors.counterpartTitle ? 'counterpart-title-error' : undefined"
+          @input="fieldErrors.counterpartTitle = ''"
         />
-        <p v-if="fieldErrors.counterpartTitle" class="field-error">
+        <p
+          v-if="fieldErrors.counterpartTitle"
+          id="counterpart-title-error"
+          class="field-error"
+        >
           {{ fieldErrors.counterpartTitle }}
         </p>
 
-        <label class="field-group">
+        <label class="field-group" for="counterpart-description">
           <span>Argumento opuesto</span>
           <textarea
+            id="counterpart-description"
             v-model="form.counterpart.description"
+            required
+            minlength="100"
             rows="7"
-            placeholder="Escribe minimo 100 caracteres..."
+            placeholder="Escribe mínimo 100 caracteres..."
             :aria-invalid="Boolean(fieldErrors.counterpartDescription)"
+            :aria-describedby="fieldErrors.counterpartDescription ? 'counterpart-description-error' : 'counterpart-description-counter'"
+            @input="fieldErrors.counterpartDescription = ''"
           />
-          <small>
+          <small id="counterpart-description-counter">
             {{ form.counterpart.description.length }} caracteres
           </small>
-          <small v-if="fieldErrors.counterpartDescription" class="field-error">
+          <small
+            v-if="fieldErrors.counterpartDescription"
+            id="counterpart-description-error"
+            class="field-error"
+          >
             {{ fieldErrors.counterpartDescription }}
           </small>
         </label>
@@ -146,7 +216,7 @@
       <section class="form-card">
         <div class="section-heading">
           <h2>Hashtags</h2>
-          <p>Presiona Enter o coma para agregar etiquetas. Maximo 10.</p>
+          <p>Presiona Enter o coma para agregar etiquetas. Máximo 10.</p>
         </div>
 
         <div class="tag-input">
@@ -157,8 +227,12 @@
               class="chip"
             >
               #{{ tag }}
-              <button type="button" @click="removeHashtag(tag)">
-                x
+              <button
+                type="button"
+                :aria-label="`Eliminar hashtag ${tag}`"
+                @click="removeHashtag(tag)"
+              >
+                ×
               </button>
             </span>
           </div>
@@ -166,6 +240,8 @@
           <input
             v-model="hashtagQuery"
             type="text"
+            maxlength="50"
+            autocomplete="off"
             placeholder="Escribe un hashtag"
             @keydown.enter.prevent="addHashtag(hashtagQuery)"
             @keydown.comma.prevent="addHashtag(hashtagQuery)"
@@ -192,7 +268,12 @@
         <BaseButton type="submit" :disabled="isSubmitting">
           {{ submitButtonText }}
         </BaseButton>
-        <button class="secondary-button" type="button" @click="cancel">
+        <button
+          class="secondary-button"
+          type="button"
+          :disabled="isSubmitting"
+          @click="cancel"
+        >
           Cancelar
         </button>
       </div>
@@ -254,7 +335,7 @@ const SourceEditor = defineComponent({
   setup(props, { emit }) {
     function getYoutubeEmbedUrl(url: string) {
       const match = url.match(
-        /(?:youtube\.com\/watch\?v=|youtu\.be\/)([A-Za-z0-9_-]{6,})/
+        /(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/|live\/)|youtu\.be\/)([A-Za-z0-9_-]{6,})/
       )
 
       return match ? `https://www.youtube.com/embed/${match[1]}` : ''
@@ -277,13 +358,18 @@ const SourceEditor = defineComponent({
         props.error
           ? h('p', { class: 'field-error' }, props.error)
           : null,
-        ...props.sources.map((source, index) =>
-          h('div', { class: 'source-row', key: index }, [
+        ...props.sources.map((source, index) => {
+          const section = props.title.includes('A') ? 'a' : 'b'
+          const fieldId = `source-${section}-${index}`
+
+          return h('div', { class: 'source-row', key: index }, [
             h('label', { class: 'field-group' }, [
               h('span', 'Tipo'),
               h(
                 'select',
                 {
+                  id: `${fieldId}-type`,
+                  required: true,
                   value: source.type,
                   onChange: (event: Event) => {
                     source.type = (event.target as HTMLSelectElement)
@@ -300,6 +386,9 @@ const SourceEditor = defineComponent({
             h('label', { class: 'field-group' }, [
               h('span', 'URL'),
               h('input', {
+                id: `${fieldId}-url`,
+                type: 'url',
+                required: true,
                 value: source.url,
                 placeholder: 'https://...',
                 onInput: (event: Event) => {
@@ -308,8 +397,10 @@ const SourceEditor = defineComponent({
               }),
             ]),
             h('label', { class: 'field-group' }, [
-              h('span', 'Titulo de la fuente'),
+              h('span', 'Título de la fuente'),
               h('input', {
+                id: `${fieldId}-label`,
+                required: true,
                 value: source.label ?? '',
                 placeholder: 'Nombre de referencia',
                 onInput: (event: Event) => {
@@ -323,6 +414,7 @@ const SourceEditor = defineComponent({
                 type: 'button',
                 class: 'danger-button',
                 disabled: props.sources.length === 1,
+                'aria-label': `Eliminar fuente ${index + 1} de ${props.title}`,
                 onClick: () => emit('remove', index),
               },
               'Eliminar'
@@ -335,10 +427,12 @@ const SourceEditor = defineComponent({
                   allow:
                     'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture',
                   allowfullscreen: true,
+                  loading: 'lazy',
+                  referrerpolicy: 'strict-origin-when-cross-origin',
                 })
               : null,
           ])
-        ),
+        }),
       ])
   },
 })
@@ -359,6 +453,7 @@ const loadError = ref('')
 const submitError = ref('')
 const initialSnapshot = ref('')
 const hasSubmitted = ref(false)
+const allowNavigation = ref(false)
 
 const form = reactive({
   title: '',
@@ -428,14 +523,18 @@ function addHashtag(value: string) {
 
   if (!tag) return
 
+  if (form.hashtags.includes(tag)) {
+    hashtagQuery.value = ''
+    fieldErrors.hashtags = ''
+    return
+  }
+
   if (form.hashtags.length >= 10) {
     fieldErrors.hashtags = 'Solo puedes agregar hasta 10 hashtags.'
     return
   }
 
-  if (!form.hashtags.includes(tag)) {
-    form.hashtags.push(tag)
-  }
+  form.hashtags.push(tag)
 
   hashtagQuery.value = ''
   fieldErrors.hashtags = ''
@@ -456,8 +555,8 @@ function removeSource(side: SideKey, index: number) {
 
 function isValidUrl(value: string) {
   try {
-    new URL(value)
-    return true
+    const url = new URL(value)
+    return url.protocol === 'http:' || url.protocol === 'https:'
   } catch {
     return false
   }
@@ -467,7 +566,12 @@ function validateSources(sources: SourceForm[]) {
   if (sources.length === 0) return false
 
   return sources.every((source) => {
-    return source.type && source.url.trim() && isValidUrl(source.url.trim())
+    return Boolean(
+      source.type &&
+      source.url.trim() &&
+      isValidUrl(source.url.trim()) &&
+      source.label?.trim()
+    )
   })
 }
 
@@ -476,20 +580,20 @@ function validateForm() {
   let valid = true
 
   if (!form.title.trim()) {
-    fieldErrors.title = 'El titulo de la publicacion es requerido.'
+    fieldErrors.title = 'El título de la publicación es requerido.'
     valid = false
   } else if (form.title.length > 120) {
-    fieldErrors.title = 'El titulo no puede superar 120 caracteres.'
+    fieldErrors.title = 'El título no puede superar 120 caracteres.'
     valid = false
   }
 
   if (!form.categoryId) {
-    fieldErrors.categoryId = 'Selecciona una categoria.'
+    fieldErrors.categoryId = 'Selecciona una categoría.'
     valid = false
   }
 
   if (!form.side.title.trim()) {
-    fieldErrors.sideTitle = 'El titulo del Lado A es requerido.'
+    fieldErrors.sideTitle = 'El título del Lado A es requerido.'
     valid = false
   }
 
@@ -501,12 +605,12 @@ function validateForm() {
 
   if (!validateSources(form.side.sources)) {
     fieldErrors.sideSources =
-      'Agrega al menos una fuente valida para el Lado A.'
+      'Agrega al menos una fuente válida con URL y título para el Lado A.'
     valid = false
   }
 
   if (!form.counterpart.title.trim()) {
-    fieldErrors.counterpartTitle = 'El titulo del Lado B es requerido.'
+    fieldErrors.counterpartTitle = 'El título del Lado B es requerido.'
     valid = false
   }
 
@@ -518,13 +622,13 @@ function validateForm() {
 
   if (!validateSources(form.counterpart.sources)) {
     fieldErrors.counterpartSources =
-      'Agrega al menos una fuente valida para el Lado B.'
+      'Agrega al menos una fuente válida con URL y título para el Lado B.'
     valid = false
   }
 
   if (!valid) {
     submitError.value =
-      'Hay campos incompletos o invalidos. Revisa los mensajes marcados en rojo.'
+      'Hay campos incompletos o inválidos. Revisa los mensajes marcados en rojo.'
   }
 
   return valid
@@ -613,10 +717,12 @@ async function loadInitialData() {
     }
 
     initialSnapshot.value = JSON.stringify(form)
+    hasSubmitted.value = false
+    allowNavigation.value = false
   } catch (error) {
     console.error('Error cargando formulario:', error)
     loadError.value =
-      'No se pudo cargar la informacion necesaria para esta pantalla.'
+      'No se pudo cargar la información necesaria para esta pantalla.'
   } finally {
     isLoading.value = false
   }
@@ -642,7 +748,7 @@ async function loadHashtagSuggestions(query: string) {
 function applySubmitError(error: unknown) {
   if (!axios.isAxiosError(error)) {
     submitError.value =
-      error instanceof Error ? error.message : 'No se pudo guardar la publicacion.'
+      error instanceof Error ? error.message : 'No se pudo guardar la publicación.'
     return
   }
 
@@ -665,7 +771,7 @@ function applySubmitError(error: unknown) {
 
   if (status === 403) {
     submitError.value =
-      'No tienes permiso para editar esta publicacion.'
+      'No tienes permiso para editar esta publicación.'
     return
   }
 
@@ -675,6 +781,8 @@ function applySubmitError(error: unknown) {
 }
 
 async function handleSubmit() {
+  if (isSubmitting.value) return
+
   if (!validateForm()) {
     scrollToFirstError()
     return
@@ -699,21 +807,25 @@ async function handleSubmit() {
 }
 
 function cancel() {
-  if (isDirty.value && !window.confirm('Tienes cambios sin guardar. Deseas salir?')) {
+  if (
+    isDirty.value &&
+    !window.confirm('Tienes cambios sin guardar. ¿Deseas salir?')
+  ) {
     return
   }
 
+  allowNavigation.value = true
   router.back()
 }
 
 watch(debouncedHashtagQuery, loadHashtagSuggestions)
 
 onBeforeRouteLeave(() => {
-  if (hasSubmitted.value || !isDirty.value) {
+  if (hasSubmitted.value || allowNavigation.value || !isDirty.value) {
     return true
   }
 
-  return window.confirm('Tienes cambios sin guardar. Deseas salir?')
+  return window.confirm('Tienes cambios sin guardar. ¿Deseas salir?')
 })
 
 onMounted(loadInitialData)
