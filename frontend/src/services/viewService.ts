@@ -1,5 +1,9 @@
 import api from './api'
-import type { View, ViewListResponse } from '../models/view'
+import type {
+  View,
+  ViewListResponse,
+  ViewSource,
+} from '../models/view'
 
 export interface ViewFilters {
   category?: string
@@ -16,6 +20,20 @@ export interface SearchResult {
   categories: unknown[]
   hashtags: unknown[]
   authors: unknown[]
+}
+
+export interface ViewSidePayload {
+  title: string
+  description: string
+  sources: Omit<ViewSource, 'id'>[]
+}
+
+export interface SaveViewPayload {
+  title?: string
+  categoryId: string
+  side: ViewSidePayload
+  counterpart: ViewSidePayload
+  hashtags?: string[]
 }
 
 export async function getViews(
@@ -41,6 +59,55 @@ export async function searchViews(
         q: query,
       },
     }
+  )
+
+  return response.data
+}
+
+export async function getViewById(
+  viewId: string
+): Promise<View> {
+  const response = await api.get<{ view: View }>(
+    `/api/views/${viewId}`
+  )
+
+  return response.data.view
+}
+
+export async function createView(
+  payload: SaveViewPayload
+): Promise<View> {
+  const response = await api.post<{ view: View }>(
+    '/api/views',
+    payload
+  )
+
+  return response.data.view
+}
+
+export async function updateView(
+  viewId: string,
+  payload: SaveViewPayload
+): Promise<View> {
+  const response = await api.put<{ view: View }>(
+    `/api/views/${viewId}`,
+    payload
+  )
+
+  return response.data.view
+}
+
+export async function reactToViewSide(
+  viewId: string,
+  side: 'a' | 'b',
+  type: 'LIKE' | 'DISLIKE'
+): Promise<{
+  likeCount: number
+  dislikeCount: number
+  myReaction: 'LIKE' | 'DISLIKE' | null
+}> {
+  const response = await api.post(
+    `/api/views/${viewId}/sides/${side}/${type.toLowerCase()}`
   )
 
   return response.data

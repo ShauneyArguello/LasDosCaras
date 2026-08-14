@@ -32,6 +32,18 @@ const routes = [
     component: () => import('../views/SearchResultsView.vue'),
   },
   {
+    path: '/views/new',
+    name: 'view-create',
+    component: () => import('../views/CreateEditView.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/views/:id/edit',
+    name: 'view-edit',
+    component: () => import('../views/CreateEditView.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
     path: '/views/:id',
     name: 'view-detail',
     component: () => import('../views/ViewDetailView.vue'),
