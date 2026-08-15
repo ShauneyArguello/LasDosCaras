@@ -6,3 +6,13 @@ export async function getCategories(): Promise<Category[]> {
 
   return response.data.categories
 }
+
+export async function getCategoryById(
+  categoryId: string
+): Promise<Category> {
+  const response = await api.get(
+    `/api/categories/${categoryId}`
+  )
+
+  return response.data.category
+}

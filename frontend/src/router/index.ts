@@ -31,6 +31,12 @@ const routes = [
     name: 'search',
     component: () => import('../views/SearchResultsView.vue'),
   },
+
+  {
+    path: '/categories/:id',
+    name: 'category-detail',
+    component: () => import('../views/CategoryView.vue'),
+  },
   {
     path: '/views/new',
     name: 'view-create',
@@ -68,10 +74,10 @@ const routes = [
   },
 
   {
-  path: '/authors/:id',
-  name: 'author-detail',
-  component: () => import('../views/AuthorView.vue'),
-},
+    path: '/authors/:id',
+    name: 'author-detail',
+    component: () => import('../views/AuthorView.vue'),
+  },
 
   {
     path: '/:pathMatch(.*)*',
