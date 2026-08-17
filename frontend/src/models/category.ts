@@ -2,6 +2,6 @@ export interface Category {
   id: string
   name: string
   description?: string
-  active?: boolean
+  deletedAt?: string | null
   viewsCount?: number
 }
