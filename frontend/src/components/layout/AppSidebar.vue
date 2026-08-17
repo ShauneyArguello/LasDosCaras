@@ -4,11 +4,17 @@
       <RouterLink to="/" class="nav-item">Inicio</RouterLink>
       <RouterLink to="/board" class="nav-item">Tablero</RouterLink>
       <RouterLink to="/profile" class="nav-item">Perfil</RouterLink>
-      <RouterLink to="/admin/users" class="nav-item">Usuarios admin</RouterLink>
-      <RouterLink to="/admin/categories" class="nav-item">Categorias admin</RouterLink>
+      <RouterLink v-if="authStore.isSuperadmin" to="/admin/users" class="nav-item">Usuarios admin</RouterLink>
+      <RouterLink v-if="authStore.isSuperadmin" to="/admin/categories" class="nav-item">Categorias admin</RouterLink>
     </nav>
   </aside>
 </template>
+
+<script setup lang="ts">
+import { useAuthStore } from '../../stores/auth'
+
+const authStore = useAuthStore()
+</script>
 
 <style scoped>
 .app-sidebar {

@@ -260,8 +260,7 @@ const canEdit = computed(() => {
 
   return (
     user.id === view.value.author.id ||
-    user.role === 'SUPERADMIN' ||
-    user.rol === 'SUPERADMIN'
+    authStore.isSuperadmin
   )
 })
 

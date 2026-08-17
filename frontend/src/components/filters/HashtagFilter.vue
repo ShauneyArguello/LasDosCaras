@@ -65,6 +65,7 @@ function selectHashtag(
 .hashtag-filter {
   display: flex;
   flex-direction: column;
+  min-width: 0;
   gap: 0.5rem;
 }
 
@@ -75,7 +76,7 @@ function selectHashtag(
 
 .hashtag-filter input {
   width: 100%;
-  min-width: 220px;
+  min-width: 0;
   padding: 0.75rem 0.9rem;
   border: 1px solid #334155;
   border-radius: 10px;
@@ -101,12 +102,14 @@ function selectHashtag(
 }
 
 .hashtag-chip {
+  max-width: 100%;
   padding: 0.45rem 0.75rem;
   border: 1px solid #334155;
   border-radius: 999px;
   background: #172033;
   color: #cbd5e1;
   cursor: pointer;
+  overflow-wrap: anywhere;
   transition: 0.2s ease;
 }
 

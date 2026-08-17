@@ -1,21 +1,29 @@
 <template>
   <section class="admin-categories-page">
-
     <header class="page-header">
-      <p class="eyebrow">
-        SUPERADMIN
-      </p>
+      <div>
+        <p class="eyebrow">
+          SUPERADMIN
+        </p>
 
-      <h1>
-        Gestión de categorías
-      </h1>
+        <h1>
+          Gestión de categorías
+        </h1>
 
-      <p class="description">
-        Crea, edita y administra las categorías del sistema.
-      </p>
+        <p class="description">
+          Crea, edita y administra las categorías del sistema.
+        </p>
+      </div>
+
+      <button
+        type="button"
+        class="primary-button"
+        @click="startCreate"
+      >
+        Nueva Categoría
+      </button>
     </header>
 
-    <!-- Mensaje -->
     <p
       v-if="message"
       class="message"
@@ -25,45 +33,69 @@
       {{ message }}
     </p>
 
-    <!-- Formulario -->
-    <section class="category-form">
+    <section
+      v-if="isFormOpen"
+      class="category-form"
+      aria-labelledby="category-form-title"
+    >
+      <div class="form-header">
+        <h2 id="category-form-title">
+          {{
+            editingCategoryId
+              ? 'Editar categoría'
+              : 'Nueva categoría'
+          }}
+        </h2>
 
-      <h2>
-        {{
-          editingCategoryId
-            ? 'Editar categoría'
-            : 'Nueva categoría'
-        }}
-      </h2>
-
-      <div class="form-group">
-        <label for="name">
-          Nombre
-        </label>
-
-        <input
-          id="name"
-          v-model="name"
-          type="text"
-          placeholder="Nombre de la categoría"
-        />
+        <button
+          type="button"
+          class="ghost-button"
+          @click="cancelForm"
+        >
+          Cerrar
+        </button>
       </div>
 
-      <div class="form-group">
-        <label for="description">
-          Descripción
-        </label>
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="name">
+            Nombre
+          </label>
 
-        <textarea
-          id="description"
-          v-model="description"
-          rows="3"
-          placeholder="Descripción de la categoría"
-        ></textarea>
+          <input
+            id="name"
+            v-model="name"
+            type="text"
+            placeholder="Nombre de la categoría"
+            :aria-invalid="Boolean(nameError)"
+            :aria-describedby="nameError ? 'name-error' : undefined"
+            @input="nameError = ''"
+          />
+
+          <p
+            v-if="nameError"
+            id="name-error"
+            class="field-error"
+          >
+            {{ nameError }}
+          </p>
+        </div>
+
+        <div class="form-group">
+          <label for="description">
+            Descripción
+          </label>
+
+          <textarea
+            id="description"
+            v-model="description"
+            rows="3"
+            placeholder="Descripción de la categoría"
+          ></textarea>
+        </div>
       </div>
 
       <div class="form-actions">
-
         <button
           type="button"
           class="save-button"
@@ -71,31 +103,28 @@
           @click="saveCategory"
         >
           {{
-            editingCategoryId
-              ? 'Guardar cambios'
-              : 'Crear categoría'
+            saving
+              ? 'Guardando...'
+              : editingCategoryId
+                ? 'Guardar cambios'
+                : 'Crear categoría'
           }}
         </button>
 
         <button
-          v-if="editingCategoryId"
           type="button"
           class="cancel-button"
-          @click="cancelEdit"
+          @click="cancelForm"
         >
           Cancelar
         </button>
-
       </div>
-
     </section>
 
-    <!-- Cargando -->
     <p v-if="loading">
       Cargando categorías...
     </p>
 
-    <!-- Error -->
     <div
       v-else-if="error"
       class="error-state"
@@ -106,13 +135,13 @@
 
       <button
         type="button"
+        class="secondary-button"
         @click="loadCategories"
       >
         Reintentar
       </button>
     </div>
 
-    <!-- Sin categorías -->
     <p
       v-else-if="categories.length === 0"
       class="empty-state"
@@ -120,13 +149,11 @@
       No hay categorías registradas.
     </p>
 
-    <!-- Tabla -->
     <div
       v-else
       class="table-container"
     >
       <table>
-
         <thead>
           <tr>
             <th>Nombre</th>
@@ -138,45 +165,43 @@
         </thead>
 
         <tbody>
-
           <tr
             v-for="category in categories"
             :key="category.id"
           >
             <td>
-              {{ category.name }}
+              {{ getCategoryName(category) }}
             </td>
 
             <td>
               {{
-                category.description ||
+                getCategoryDescription(category) ||
                 'Sin descripción'
               }}
             </td>
 
             <td>
-              {{ category.viewsCount ?? 0 }}
+              {{ getViewsCount(category) }}
             </td>
 
             <td>
               <span
                 class="status-badge"
                 :class="
-                  category.deletedAt
-                    ? 'inactive'
-                    : 'active'
+                  isCategoryActive(category)
+                    ? 'active'
+                    : 'inactive'
                 "
               >
                 {{
-                  category.deletedAt
-                    ? 'Inactiva'
-                    : 'Activa'
+                  isCategoryActive(category)
+                    ? 'Activa'
+                    : 'Inactiva'
                 }}
               </span>
             </td>
 
             <td class="actions">
-
               <button
                 type="button"
                 class="edit-button"
@@ -186,39 +211,85 @@
               </button>
 
               <button
-                v-if="!category.deletedAt"
+                v-if="isCategoryActive(category)"
                 type="button"
                 class="delete-button"
-                :disabled="
-                  deletingId === category.id
-                "
-                @click="confirmDelete(category)"
+                :disabled="actionLoadingId === category.id"
+                @click="openDeleteDialog(category)"
               >
-                Desactivar
+                Eliminar
               </button>
 
-              <span
+              <button
                 v-else
-                class="inactive-text"
+                type="button"
+                class="activate-button"
+                :disabled="actionLoadingId === category.id"
+                @click="confirmActivate(category)"
               >
-                Categoría inactiva
-              </span>
-
+                Activar
+              </button>
             </td>
-
           </tr>
-
         </tbody>
-
       </table>
     </div>
 
+    <div
+      v-if="categoryToDelete"
+      class="modal-backdrop"
+      role="presentation"
+      @click.self="closeDeleteDialog"
+    >
+      <section
+        class="confirm-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="delete-dialog-title"
+      >
+        <h2 id="delete-dialog-title">
+          Eliminar categoría
+        </h2>
+
+        <p>
+          ¿Deseas eliminar la categoría
+          <strong>"{{ getCategoryName(categoryToDelete) }}"</strong>?
+        </p>
+
+        <p
+          v-if="getViewsCount(categoryToDelete) > 0"
+          class="warning-text"
+        >
+          Esta categoría tiene {{ getViewsCount(categoryToDelete) }}
+          publicaciones asociadas. Si el API no permite eliminarla,
+          se mostrará el aviso correspondiente.
+        </p>
+
+        <div class="dialog-actions">
+          <button
+            type="button"
+            class="cancel-button"
+            @click="closeDeleteDialog"
+          >
+            Cancelar
+          </button>
+
+          <button
+            type="button"
+            class="delete-button"
+            :disabled="actionLoadingId === categoryToDelete.id"
+            @click="deleteSelectedCategory"
+          >
+            Confirmar eliminación
+          </button>
+        </div>
+      </section>
+    </div>
   </section>
 </template>
 
 
 <script setup lang="ts">
-
 import {
   onMounted,
   ref,
@@ -231,10 +302,11 @@ import type {
 } from '../models/category'
 
 import {
-  getAdminCategories,
+  activateCategory,
   createCategory,
-  updateCategory,
   deleteCategory,
+  getAdminCategories,
+  updateCategory,
 } from '../services/adminCategoryService'
 
 
@@ -255,11 +327,16 @@ const messageType =
     'success'
   )
 
+const isFormOpen =
+  ref(false)
 
 const name =
   ref('')
 
 const description =
+  ref('')
+
+const nameError =
   ref('')
 
 const editingCategoryId =
@@ -268,14 +345,18 @@ const editingCategoryId =
 const saving =
   ref(false)
 
-const deletingId =
+const actionLoadingId =
   ref('')
+
+const categoryToDelete =
+  ref<Category | null>(null)
 
 
 function showMessage(
   text: string,
   type: 'success' | 'error'
 ) {
+
   message.value =
     text
 
@@ -285,6 +366,68 @@ function showMessage(
   setTimeout(() => {
     message.value = ''
   }, 3000)
+
+}
+
+
+function getCategoryName(
+  category: Category
+): string {
+
+  return (
+    category.name ??
+    category.nombre ??
+    ''
+  )
+
+}
+
+
+function getCategoryDescription(
+  category: Category
+): string {
+
+  return (
+    category.description ??
+    category.descripcion ??
+    ''
+  )
+
+}
+
+
+function getViewsCount(
+  category: Category
+): number {
+
+  return (
+    category.viewsCount ??
+    category.publicacionesCount ??
+    category.publicationsCount ??
+    0
+  )
+
+}
+
+
+function isCategoryActive(
+  category: Category
+): boolean {
+
+  if (typeof category.isActive === 'boolean') {
+    return category.isActive
+  }
+
+  if (typeof category.activa === 'boolean') {
+    return category.activa
+  }
+
+  if (typeof category.active === 'boolean') {
+    return category.active
+  }
+
+  return !category.deletedAt
+
 }
 
 
@@ -317,6 +460,7 @@ async function loadCategories() {
       false
 
   }
+
 }
 
 
@@ -330,17 +474,50 @@ function categoryNameExists():
 
   return categories.value.some(
     category =>
-      category.name
+      getCategoryName(category)
         .trim()
         .toLowerCase() ===
         normalizedName &&
       category.id !==
         editingCategoryId.value
   )
+
+}
+
+
+function validateForm():
+  boolean {
+
+  const cleanName =
+    name.value.trim()
+
+  nameError.value =
+    ''
+
+  if (!cleanName) {
+    nameError.value =
+      'El nombre de la categoría es obligatorio.'
+
+    return false
+  }
+
+  if (categoryNameExists()) {
+    nameError.value =
+      'Ya existe una categoría con ese nombre.'
+
+    return false
+  }
+
+  return true
+
 }
 
 
 async function saveCategory() {
+
+  if (!validateForm()) {
+    return
+  }
 
   const cleanName =
     name.value.trim()
@@ -348,32 +525,8 @@ async function saveCategory() {
   const cleanDescription =
     description.value.trim()
 
-
-  if (!cleanName) {
-
-    showMessage(
-      'El nombre de la categoría es obligatorio.',
-      'error'
-    )
-
-    return
-  }
-
-
-  if (categoryNameExists()) {
-
-    showMessage(
-      'Ya existe una categoría con ese nombre.',
-      'error'
-    )
-
-    return
-  }
-
-
   saving.value =
     true
-
 
   try {
 
@@ -404,7 +557,6 @@ async function saveCategory() {
 
     }
 
-
     clearForm()
 
     await loadCategories()
@@ -416,11 +568,13 @@ async function saveCategory() {
       err
     )
 
-
     if (
       axios.isAxiosError(err) &&
       err.response?.status === 409
     ) {
+
+      nameError.value =
+        'Ya existe una categoría con ese nombre.'
 
       showMessage(
         'Ya existe una categoría con ese nombre.',
@@ -442,6 +596,17 @@ async function saveCategory() {
       false
 
   }
+
+}
+
+
+function startCreate() {
+
+  clearForm()
+
+  isFormOpen.value =
+    true
+
 }
 
 
@@ -453,15 +618,21 @@ function startEdit(
     category.id
 
   name.value =
-    category.name
+    getCategoryName(category)
 
   description.value =
-    category.description ?? ''
+    getCategoryDescription(category)
+
+  nameError.value =
+    ''
+
+  isFormOpen.value =
+    true
 
 }
 
 
-function cancelEdit() {
+function cancelForm() {
 
   clearForm()
 
@@ -479,27 +650,48 @@ function clearForm() {
   description.value =
     ''
 
+  nameError.value =
+    ''
+
+  isFormOpen.value =
+    false
+
 }
 
 
-async function confirmDelete(
+function openDeleteDialog(
   category: Category
 ) {
 
-  const confirmed =
-    window.confirm(
-      `¿Deseas desactivar la categoría "${category.name}"?`
-    )
+  categoryToDelete.value =
+    category
+
+}
 
 
-  if (!confirmed) {
+function closeDeleteDialog() {
+
+  if (actionLoadingId.value) {
     return
   }
 
+  categoryToDelete.value =
+    null
 
-  deletingId.value =
+}
+
+
+async function deleteSelectedCategory() {
+
+  if (!categoryToDelete.value) {
+    return
+  }
+
+  const category =
+    categoryToDelete.value
+
+  actionLoadingId.value =
     category.id
-
 
   try {
 
@@ -507,22 +699,22 @@ async function confirmDelete(
       category.id
     )
 
-
     showMessage(
-      'Categoría desactivada correctamente.',
+      'Categoría eliminada correctamente.',
       'success'
     )
 
+    categoryToDelete.value =
+      null
 
     await loadCategories()
 
   } catch (err) {
 
     console.error(
-      'Error desactivando categoría:',
+      'Error eliminando categoría:',
       err
     )
-
 
     if (
       axios.isAxiosError(err) &&
@@ -530,14 +722,14 @@ async function confirmDelete(
     ) {
 
       showMessage(
-        'No se puede desactivar porque tiene publicaciones asociadas.',
+        'No se puede eliminar porque tiene publicaciones asociadas.',
         'error'
       )
 
     } else {
 
       showMessage(
-        'No se pudo desactivar la categoría.',
+        'No se pudo eliminar la categoría.',
         'error'
       )
 
@@ -545,37 +737,86 @@ async function confirmDelete(
 
   } finally {
 
-    deletingId.value =
+    actionLoadingId.value =
       ''
 
   }
+
+}
+
+
+async function confirmActivate(
+  category: Category
+) {
+
+  actionLoadingId.value =
+    category.id
+
+  try {
+
+    await activateCategory(
+      category.id,
+      getCategoryName(category),
+      getCategoryDescription(category)
+    )
+
+    showMessage(
+      'Categoría activada correctamente.',
+      'success'
+    )
+
+    await loadCategories()
+
+  } catch (err) {
+
+    console.error(
+      'Error activando categoría:',
+      err
+    )
+
+    showMessage(
+      'No se pudo activar la categoría.',
+      'error'
+    )
+
+  } finally {
+
+    actionLoadingId.value =
+      ''
+
+  }
+
 }
 
 
 onMounted(() => {
   loadCategories()
 })
-
 </script>
 
 
 <style scoped>
-
 .admin-categories-page {
   width: 100%;
 }
 
-
 .page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
   margin-bottom: 24px;
 }
 
-
-.page-header h1 {
+.page-header h1,
+.category-form h2,
+.confirm-dialog h2 {
   margin: 0;
-  font-size: 32px;
 }
 
+.page-header h1 {
+  font-size: 32px;
+}
 
 .eyebrow {
   margin-bottom: 6px;
@@ -584,37 +825,45 @@ onMounted(() => {
   font-weight: bold;
 }
 
-
 .description {
   color: #64748b;
 }
-
 
 .category-form {
   margin-bottom: 30px;
   padding: 20px;
   border: 1px solid #e2e8f0;
-  border-radius: 12px;
+  border-radius: 8px;
 }
 
-
-.category-form h2 {
-  margin-top: 0;
+.form-header,
+.form-actions,
+.dialog-actions,
+.actions {
+  display: flex;
+  gap: 10px;
 }
 
+.form-header {
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+
+.form-grid {
+  display: grid;
+  gap: 16px;
+}
 
 .form-group {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  margin-bottom: 16px;
 }
-
 
 .form-group label {
   font-weight: 600;
 }
-
 
 .form-group input,
 .form-group textarea {
@@ -623,82 +872,84 @@ onMounted(() => {
   border-radius: 8px;
 }
 
-
-.form-actions {
-  display: flex;
-  gap: 10px;
+.form-group input[aria-invalid='true'] {
+  border-color: #dc2626;
 }
 
+.form-actions {
+  margin-top: 18px;
+}
 
+.primary-button,
+.secondary-button,
 .save-button,
 .cancel-button,
+.ghost-button,
 .edit-button,
-.delete-button {
+.delete-button,
+.activate-button {
   padding: 9px 14px;
   border: none;
   border-radius: 8px;
-  color: white;
   cursor: pointer;
 }
 
-
-.save-button {
-  background: #2563eb;
-}
-
-
-.cancel-button {
-  background: #64748b;
-}
-
-
+.primary-button,
+.save-button,
 .edit-button {
   background: #2563eb;
+  color: white;
 }
 
+.secondary-button,
+.cancel-button,
+.ghost-button {
+  border: 1px solid #cbd5e1;
+  background: white;
+  color: #334155;
+}
 
 .delete-button {
   background: #dc2626;
+  color: white;
 }
 
+.activate-button {
+  background: #16a34a;
+  color: white;
+}
 
 button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
 
-
 .table-container {
   width: 100%;
   overflow-x: auto;
 }
-
 
 table {
   width: 100%;
   border-collapse: collapse;
 }
 
-
 th,
 td {
   padding: 12px;
   border-bottom: 1px solid #e2e8f0;
   text-align: left;
+  vertical-align: middle;
 }
-
 
 th {
   background: #f8fafc;
 }
 
-
 .actions {
-  display: flex;
-  gap: 8px;
   align-items: center;
+  flex-wrap: wrap;
 }
-
 
 .status-badge {
   display: inline-block;
@@ -708,25 +959,15 @@ th {
   font-weight: bold;
 }
 
-
 .status-badge.active {
   background: #dcfce7;
   color: #166534;
 }
 
-
 .status-badge.inactive {
   background: #fee2e2;
   color: #991b1b;
 }
-
-
-.inactive-text {
-  color: #991b1b;
-  font-size: 0.85rem;
-  font-weight: 600;
-}
-
 
 .message {
   margin-bottom: 16px;
@@ -734,42 +975,81 @@ th {
   border-radius: 8px;
 }
 
-
 .message.success {
   background: #dcfce7;
   color: #166534;
 }
-
 
 .message.error {
   background: #fee2e2;
   color: #991b1b;
 }
 
+.field-error {
+  margin: 0;
+  color: #dc2626;
+  font-size: 14px;
+}
 
 .error-state,
 .empty-state {
   padding: 20px;
   border: 1px solid #e2e8f0;
-  border-radius: 10px;
+  border-radius: 8px;
 }
 
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgb(15 23 42 / 0.55);
+}
+
+.confirm-dialog {
+  width: min(100%, 460px);
+  padding: 22px;
+  border-radius: 8px;
+  background: white;
+  box-shadow: 0 24px 60px rgb(15 23 42 / 0.24);
+}
+
+.confirm-dialog p {
+  color: #475569;
+}
+
+.warning-text {
+  padding: 12px;
+  border: 1px solid #fed7aa;
+  border-radius: 8px;
+  background: #fff7ed;
+  color: #9a3412;
+  font-weight: 600;
+}
+
+.dialog-actions {
+  justify-content: flex-end;
+  margin-top: 18px;
+}
 
 @media (max-width: 768px) {
-
-  .form-actions {
+  .page-header,
+  .form-header,
+  .form-actions,
+  .dialog-actions {
+    align-items: stretch;
     flex-direction: column;
   }
 
   .actions {
-    flex-direction: column;
     align-items: flex-start;
+    flex-direction: column;
   }
 
   .page-header h1 {
     font-size: 26px;
   }
-
 }
-
 </style>

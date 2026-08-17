@@ -138,9 +138,11 @@ router.beforeEach((to) => {
       const user = JSON.parse(storedUser)
 
       role =
-        user.role ??
-        user.rol ??
-        ''
+        (
+          user.role ??
+          user.rol ??
+          ''
+        ).toLowerCase()
     } catch {
       role = ''
     }

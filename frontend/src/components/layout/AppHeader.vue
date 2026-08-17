@@ -166,6 +166,7 @@ onMounted(loadCategories)
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
   gap: 24px;
   padding: 0 28px;
   background: var(--surface);
@@ -179,12 +180,24 @@ onMounted(loadCategories)
 .header-right {
   display: flex;
   align-items: center;
+  min-width: 0;
   gap: 14px;
+}
+
+.header-left {
+  flex: 1 1 390px;
+}
+
+.header-right {
+  flex: 1 1 520px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
 }
 
 .brand {
   display: inline-flex;
   align-items: center;
+  flex: 0 0 auto;
   gap: 10px;
   color: var(--text-primary);
   text-decoration: none;
@@ -210,6 +223,7 @@ onMounted(loadCategories)
 .top-nav {
   display: flex;
   align-items: center;
+  min-width: 0;
   gap: 8px;
 }
 
@@ -233,6 +247,7 @@ onMounted(loadCategories)
   font-size: 14px;
   text-decoration: none;
   cursor: pointer;
+  white-space: nowrap;
 }
 
 .top-nav a:hover,
@@ -253,9 +268,12 @@ onMounted(loadCategories)
 
 .register-link,
 .create-link {
+  max-width: 156px;
   background: var(--accent);
   color: #ffffff;
   font-weight: 700;
+  text-align: center;
+  white-space: normal;
 }
 
 .register-link:hover,
@@ -283,6 +301,7 @@ onMounted(loadCategories)
 
 .category-nav select {
   max-width: 172px;
+  min-width: 140px;
   padding: 0 10px;
   cursor: pointer;
 }
@@ -290,11 +309,14 @@ onMounted(loadCategories)
 .global-search {
   display: flex;
   align-items: center;
+  flex: 1 1 300px;
+  min-width: 220px;
   gap: 8px;
 }
 
 .global-search input {
-  width: 210px;
+  width: min(100%, 260px);
+  min-width: 0;
   padding: 0 12px;
 }
 
@@ -315,6 +337,28 @@ onMounted(loadCategories)
 
 .global-search button:hover {
   background: var(--surface-muted);
+}
+
+@media (max-width: 1120px) {
+  .app-header {
+    align-items: flex-start;
+    padding: 12px 20px;
+  }
+
+  .header-left,
+  .header-right {
+    flex: 1 1 100%;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .global-search {
+    flex: 1 1 360px;
+  }
+
+  .global-search input {
+    width: 100%;
+  }
 }
 
 .sr-only {
@@ -341,6 +385,10 @@ onMounted(loadCategories)
     width: 100%;
     justify-content: flex-start;
     flex-wrap: wrap;
+  }
+
+  .brand-text {
+    display: none;
   }
 
   .top-nav {

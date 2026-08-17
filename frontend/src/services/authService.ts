@@ -3,8 +3,10 @@ import api from './api'
 export type AuthUser = {
   id?: string
   name?: string
+  nombre?: string
   email?: string
   role?: string
+  rol?: string
   status?: string
 }
 

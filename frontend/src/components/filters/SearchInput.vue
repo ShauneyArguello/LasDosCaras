@@ -32,6 +32,7 @@ watch(debouncedSearch, (value) => {
 .search-input {
   display: flex;
   flex-direction: column;
+  min-width: 0;
   gap: 0.4rem;
 }
 
@@ -42,7 +43,7 @@ watch(debouncedSearch, (value) => {
 
 .search-input input {
   width: 100%;
-  min-width: 220px;
+  min-width: 0;
   padding: 0.75rem 0.9rem;
   border: 1px solid #334155;
   border-radius: 10px;
