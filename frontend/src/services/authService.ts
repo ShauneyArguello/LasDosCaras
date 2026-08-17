@@ -28,7 +28,11 @@ type LoginPayload = {
 }
 
 export async function registerUser(payload: RegisterPayload) {
-  const response = await api.post<AuthResponse>('/api/auth/register', payload)
+  const response = await api.post<AuthResponse>(
+    '/api/auth/register',
+    payload
+  )
+
   const { activationToken, token } = response.data
   const user = response.data.user ?? null
 
@@ -39,7 +43,9 @@ export async function registerUser(payload: RegisterPayload) {
   }
 }
 
-export async function activateUser(activationToken: string) {
+export async function activateUser(
+  activationToken: string
+) {
   const response = await api.get<{ user: AuthUser }>(
     `/api/auth/activate/${activationToken}`
   )
@@ -47,8 +53,14 @@ export async function activateUser(activationToken: string) {
   return response.data.user
 }
 
-export async function loginUser(payload: LoginPayload) {
-  const response = await api.post<AuthResponse>('/api/auth/login', payload)
+export async function loginUser(
+  payload: LoginPayload
+) {
+  const response = await api.post<AuthResponse>(
+    '/api/auth/login',
+    payload
+  )
+
   const { token } = response.data
   const user = response.data.user ?? null
 
@@ -64,4 +76,12 @@ export async function getFavoriteIds() {
   )
 
   return response.data.favorites ?? []
+}
+
+export async function getCurrentUser(): Promise<AuthUser> {
+  const response = await api.get<{ user: AuthUser }>(
+    '/api/auth/me'
+  )
+
+  return response.data.user
 }
