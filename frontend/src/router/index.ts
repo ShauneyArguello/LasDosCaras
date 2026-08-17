@@ -107,6 +107,16 @@ const routes = [
   },
 
   {
+    path: '/admin/moderation',
+    name: 'admin-moderation',
+    component: () => import('../views/AdminModerationView.vue'),
+    meta: {
+      requiresAuth: true,
+      requiresSuperadmin: true,
+    },
+  },
+
+  {
     path: '/403',
     name: 'forbidden',
     component: () => import('../views/ForbiddenView.vue'),

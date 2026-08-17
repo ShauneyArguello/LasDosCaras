@@ -1,11 +1,52 @@
 <template>
   <aside class="app-sidebar">
     <nav class="sidebar-nav" aria-label="Navegacion principal">
-      <RouterLink to="/" class="nav-item">Inicio</RouterLink>
-      <RouterLink to="/board" class="nav-item">Tablero</RouterLink>
-      <RouterLink to="/profile" class="nav-item">Perfil</RouterLink>
-      <RouterLink v-if="authStore.isSuperadmin" to="/admin/users" class="nav-item">Usuarios admin</RouterLink>
-      <RouterLink v-if="authStore.isSuperadmin" to="/admin/categories" class="nav-item">Categorias admin</RouterLink>
+
+      <RouterLink
+        to="/"
+        class="nav-item"
+      >
+        Inicio
+      </RouterLink>
+
+      <RouterLink
+        to="/board"
+        class="nav-item"
+      >
+        Tablero
+      </RouterLink>
+
+      <RouterLink
+        to="/profile"
+        class="nav-item"
+      >
+        Perfil
+      </RouterLink>
+
+      <RouterLink
+        v-if="authStore.isSuperadmin"
+        to="/admin/users"
+        class="nav-item"
+      >
+        Usuarios admin
+      </RouterLink>
+
+      <RouterLink
+        v-if="authStore.isSuperadmin"
+        to="/admin/categories"
+        class="nav-item"
+      >
+        Categorias admin
+      </RouterLink>
+
+      <RouterLink
+        v-if="authStore.isSuperadmin"
+        to="/admin/moderation"
+        class="nav-item"
+      >
+        Moderación
+      </RouterLink>
+
     </nav>
   </aside>
 </template>
