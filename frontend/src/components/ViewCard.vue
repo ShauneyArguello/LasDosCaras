@@ -393,10 +393,13 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 1rem;
+  width: 100%;
+  min-width: 0;
   padding: 1.25rem;
   border: 1px solid #26344d;
   border-radius: 16px;
   background: #121c2f;
+  overflow: hidden;
 }
 
 
@@ -405,13 +408,14 @@ onMounted(() => {
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
+  min-width: 0;
 }
 
 
 .category-badge {
   display: inline-flex;
   align-items: center;
-  width: fit-content;
+  max-width: 100%;
   padding: 0.35rem 0.75rem;
   border-radius: 999px;
   background: #2563eb;
@@ -419,6 +423,7 @@ onMounted(() => {
   font-size: 0.8rem;
   font-weight: 700;
   text-decoration: none;
+  overflow-wrap: anywhere;
 }
 
 
@@ -428,6 +433,7 @@ onMounted(() => {
 
 
 .date {
+  flex: 0 0 auto;
   color: #94a3b8;
   font-size: 0.85rem;
 }
@@ -436,14 +442,18 @@ onMounted(() => {
 .view-card h2 {
   margin: 0;
   color: #f8fafc;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 
 .author-link {
   width: fit-content;
+  max-width: 100%;
   color: #60a5fa;
   text-decoration: none;
   font-weight: 600;
+  overflow-wrap: anywhere;
 }
 
 
@@ -460,36 +470,45 @@ onMounted(() => {
 
 
 .hashtag {
+  max-width: 100%;
   padding: 0.25rem 0.55rem;
   border-radius: 999px;
   background: #1e293b;
   color: #93c5fd;
   font-size: 0.8rem;
+  overflow-wrap: anywhere;
 }
 
 
 .sides {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 1rem;
+  min-width: 0;
 }
 
 
 .side {
+  min-width: 0;
   padding: 1rem;
   border-radius: 12px;
   background: #17233a;
+  overflow: hidden;
 }
 
 
 .side h3 {
   margin-top: 0;
   color: #f8fafc;
+  overflow-wrap: anywhere;
 }
 
 
 .side p {
   color: #cbd5e1;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  line-height: 1.55;
 }
 
 

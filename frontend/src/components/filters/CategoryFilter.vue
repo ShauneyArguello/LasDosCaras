@@ -42,6 +42,7 @@ watch(selectedCategory, (value) => {
 .category-filter {
   display: flex;
   flex-direction: column;
+  min-width: 0;
   gap: 0.4rem;
 }
 
@@ -52,7 +53,7 @@ watch(selectedCategory, (value) => {
 
 .category-filter select {
   width: 100%;
-  min-width: 200px;
+  min-width: 0;
   padding: 0.75rem 0.9rem;
   border: 1px solid #334155;
   border-radius: 10px;
