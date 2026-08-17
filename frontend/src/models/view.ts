@@ -42,6 +42,7 @@ export interface View {
   totalLikes?: number
   totalDislikes?: number
   isFavorite?: boolean
+  status?: 'PUBLISHED' | 'UNPUBLISHED'
 }
 
 export interface ViewListResponse {
