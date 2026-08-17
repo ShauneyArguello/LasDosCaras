@@ -11,7 +11,7 @@
       </h1>
 
       <p class="description">
-        Crea, edita y elimina las categorías del sistema.
+        Crea, edita y administra las categorías del sistema.
       </p>
     </header>
 
@@ -162,13 +162,13 @@
               <span
                 class="status-badge"
                 :class="
-                  category.active === false
+                  category.deletedAt
                     ? 'inactive'
                     : 'active'
                 "
               >
                 {{
-                  category.active === false
+                  category.deletedAt
                     ? 'Inactiva'
                     : 'Activa'
                 }}
@@ -186,6 +186,7 @@
               </button>
 
               <button
+                v-if="!category.deletedAt"
                 type="button"
                 class="delete-button"
                 :disabled="
@@ -193,8 +194,15 @@
                 "
                 @click="confirmDelete(category)"
               >
-                Eliminar
+                Desactivar
               </button>
+
+              <span
+                v-else
+                class="inactive-text"
+              >
+                Categoría inactiva
+              </span>
 
             </td>
 
@@ -480,7 +488,7 @@ async function confirmDelete(
 
   const confirmed =
     window.confirm(
-      `¿Deseas eliminar la categoría "${category.name}"?`
+      `¿Deseas desactivar la categoría "${category.name}"?`
     )
 
 
@@ -501,7 +509,7 @@ async function confirmDelete(
 
 
     showMessage(
-      'Categoría eliminada correctamente.',
+      'Categoría desactivada correctamente.',
       'success'
     )
 
@@ -511,7 +519,7 @@ async function confirmDelete(
   } catch (err) {
 
     console.error(
-      'Error eliminando categoría:',
+      'Error desactivando categoría:',
       err
     )
 
@@ -522,14 +530,14 @@ async function confirmDelete(
     ) {
 
       showMessage(
-        'No se puede eliminar porque tiene publicaciones asociadas.',
+        'No se puede desactivar porque tiene publicaciones asociadas.',
         'error'
       )
 
     } else {
 
       showMessage(
-        'No se pudo eliminar la categoría.',
+        'No se pudo desactivar la categoría.',
         'error'
       )
 
@@ -688,6 +696,7 @@ th {
 .actions {
   display: flex;
   gap: 8px;
+  align-items: center;
 }
 
 
@@ -709,6 +718,13 @@ th {
 .status-badge.inactive {
   background: #fee2e2;
   color: #991b1b;
+}
+
+
+.inactive-text {
+  color: #991b1b;
+  font-size: 0.85rem;
+  font-weight: 600;
 }
 
 
@@ -747,6 +763,7 @@ th {
 
   .actions {
     flex-direction: column;
+    align-items: flex-start;
   }
 
   .page-header h1 {
