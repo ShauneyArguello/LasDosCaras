@@ -176,6 +176,9 @@ router.beforeEach((to) => {
   ) {
     return {
       name: 'forbidden',
+      query: {
+        redirect: to.fullPath,
+      },
     }
   }
 
