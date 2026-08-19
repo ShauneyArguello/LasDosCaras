@@ -1,47 +1,124 @@
 <template>
-  <section class="forbidden-page">
-    <h1>403</h1>
+  <section class="error-page" aria-labelledby="forbidden-title">
+    <div class="error-panel">
+      <p class="eyebrow">Error 403</p>
 
-    <h2>Acceso denegado</h2>
+      <h1 id="forbidden-title">
+        Acceso denegado
+      </h1>
 
-    <p>
-      No tienes permisos para acceder a esta sección.
-    </p>
+      <p class="error-copy">
+        Esta sección requiere permisos de superadmin. Si necesitas entrar,
+        solicita el rol correspondiente a un administrador.
+      </p>
 
-    <RouterLink
-      to="/board"
-      class="back-button"
-    >
-      Volver al tablero
-    </RouterLink>
+      <p
+        v-if="attemptedPath"
+        class="blocked-route"
+      >
+        Ruta bloqueada: {{ attemptedPath }}
+      </p>
+
+      <RouterLink
+        :to="{ name: 'board' }"
+        class="error-action"
+      >
+        Volver al tablero
+      </RouterLink>
+    </div>
   </section>
 </template>
 
+<script setup lang="ts">
+import { computed } from 'vue'
+import { useRoute } from 'vue-router'
+
+const route = useRoute()
+
+const attemptedPath = computed(() => {
+  return typeof route.query.redirect === 'string'
+    ? route.query.redirect
+    : ''
+})
+</script>
+
 <style scoped>
-.forbidden-page {
-  max-width: 600px;
-  margin: 80px auto;
-  padding: 32px;
+.error-page {
+  min-height: min(620px, calc(100vh - 220px));
+  display: grid;
+  place-items: center;
+}
+
+.error-panel {
+  width: min(100%, 680px);
+  padding: 40px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
   text-align: center;
 }
 
-.forbidden-page h1 {
+.error-panel h1 {
   margin: 0;
-  font-size: 64px;
-  color: #dc2626;
+  color: var(--text-primary);
+  font-size: 40px;
+  line-height: 1.1;
 }
 
-.forbidden-page h2 {
-  margin-bottom: 12px;
+.error-copy {
+  max-width: 520px;
+  margin: 16px auto 0;
+  color: var(--text-secondary);
+  line-height: 1.6;
 }
 
-.back-button {
-  display: inline-block;
-  margin-top: 20px;
-  padding: 10px 16px;
+.blocked-route {
+  max-width: 100%;
+  margin: 18px auto 0;
+  padding: 10px 12px;
+  overflow-wrap: anywhere;
+  border: 1px solid var(--border);
   border-radius: 8px;
-  background: #2563eb;
-  color: white;
+  background: var(--surface-muted);
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+.error-action {
+  min-height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 28px;
+  padding: 0 18px;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #ffffff;
+  font-weight: 700;
   text-decoration: none;
+}
+
+.error-action:hover {
+  background: var(--accent-strong);
+}
+
+@media (max-width: 600px) {
+  .error-page {
+    min-height: auto;
+    place-items: stretch;
+  }
+
+  .error-panel {
+    padding: 28px 22px;
+  }
+
+  .error-panel h1 {
+    font-size: 32px;
+  }
+
+  .error-action {
+    width: 100%;
+  }
 }
 </style>
