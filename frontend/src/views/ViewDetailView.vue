@@ -672,7 +672,17 @@ function saveToHistory() {
   if (!view.value) return
 
   const stored = localStorage.getItem('lasdoscaras_history')
-  const history = stored ? JSON.parse(stored) as unknown[] : []
+  let history: unknown[] = []
+
+  if (stored) {
+    try {
+      const parsedHistory: unknown = JSON.parse(stored)
+      history = Array.isArray(parsedHistory) ? parsedHistory : []
+    } catch {
+      history = []
+    }
+  }
+
   const entry = {
     id: view.value.id,
     titulo: sideA.value?.title ?? 'Publicacion',
