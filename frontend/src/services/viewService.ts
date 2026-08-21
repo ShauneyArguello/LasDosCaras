@@ -132,3 +132,11 @@ export async function unfavoriteView(
 
   return response.data
 }
+
+export async function unpublishView(
+  viewId: string
+): Promise<void> {
+  await api.patch(
+    `/api/views/${viewId}/unpublish`
+  )
+}

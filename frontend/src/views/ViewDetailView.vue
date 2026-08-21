@@ -43,6 +43,16 @@
           </RouterLink>
 
           <button
+            v-if="canUnpublish"
+            type="button"
+            class="danger-button"
+            :disabled="unpublishLoading"
+            @click="handleUnpublish"
+          >
+            {{ unpublishLoading ? 'Despublicando...' : 'Despublicar' }}
+          </button>
+
+          <button
             v-if="authStore.isAuthenticated"
             type="button"
             class="secondary-button"
@@ -64,6 +74,18 @@
 
       <p v-if="shareMessage" class="success-message">
         {{ shareMessage }}
+      </p>
+
+      <p
+        v-if="actionMessage"
+        :class="
+          actionMessageType === 'error'
+            ? 'inline-error'
+            : 'success-message'
+        "
+        role="status"
+      >
+        {{ actionMessage }}
       </p>
 
       <div v-if="view.hashtags?.length" class="hashtags">
@@ -95,6 +117,188 @@
           @react="handleReaction"
         />
       </div>
+
+      <section
+        class="comments-section"
+        aria-labelledby="comments-title"
+      >
+        <header class="comments-header">
+          <div>
+            <p class="eyebrow">Conversación</p>
+            <h2 id="comments-title">Hilos de comentarios</h2>
+          </div>
+
+          <span class="thread-count">
+            {{ threads.length }}
+            {{ threads.length === 1 ? 'hilo' : 'hilos' }}
+          </span>
+        </header>
+
+        <p class="moderation-notice" role="note">
+          Los comentarios pueden quedar pendientes de revisión y están sujetos
+          a moderación para mantener una conversación respetuosa.
+        </p>
+
+        <form
+          v-if="authStore.isAuthenticated"
+          class="new-thread-form"
+          @submit.prevent="submitNewThread"
+        >
+          <h3>Crear un hilo nuevo</h3>
+
+          <label for="thread-title">Título del hilo (opcional)</label>
+          <input
+            id="thread-title"
+            v-model="newThreadTitle"
+            type="text"
+            maxlength="120"
+            placeholder="Tema de la conversación"
+          />
+
+          <label for="thread-content">Comentario inicial</label>
+          <textarea
+            id="thread-content"
+            v-model="newThreadContent"
+            required
+            rows="4"
+            placeholder="Escribe tu comentario..."
+          ></textarea>
+
+          <p
+            v-if="threadFormError"
+            class="inline-error"
+            role="alert"
+          >
+            {{ threadFormError }}
+          </p>
+
+          <button
+            type="submit"
+            class="primary-button"
+            :disabled="creatingThread"
+          >
+            {{ creatingThread ? 'Enviando...' : 'Crear hilo' }}
+          </button>
+        </form>
+
+        <p v-else class="login-hint">
+          <RouterLink
+            :to="{ name: 'login', query: { redirect: route.fullPath } }"
+          >
+            Inicia sesión
+          </RouterLink>
+          para crear hilos o agregar comentarios.
+        </p>
+
+        <p v-if="threadsLoading" class="comments-state">
+          Cargando comentarios...
+        </p>
+
+        <div
+          v-else-if="threadsError"
+          class="comments-state comments-state--error"
+        >
+          <p>{{ threadsError }}</p>
+          <button type="button" @click="loadThreads">
+            Reintentar
+          </button>
+        </div>
+
+        <p
+          v-else-if="threads.length === 0"
+          class="comments-state"
+        >
+          Todavía no hay hilos. Sé la primera persona en iniciar la conversación.
+        </p>
+
+        <div v-else class="thread-list">
+          <details
+            v-for="thread in threads"
+            :key="thread.id"
+            class="thread-card"
+          >
+            <summary>
+              <span>{{ thread.title || 'Conversación sin título' }}</span>
+              <small>
+                {{ thread.comments?.length ?? 0 }}
+                {{ (thread.comments?.length ?? 0) === 1 ? 'comentario' : 'comentarios' }}
+              </small>
+            </summary>
+
+            <div class="comment-list">
+              <article
+                v-for="comment in thread.comments"
+                :key="comment.id"
+                class="comment-card"
+              >
+                <header class="comment-meta">
+                  <strong>{{ comment.user.name }}</strong>
+                  <span>{{ formatCommentDate(comment.createdAt) }}</span>
+                  <span
+                    v-if="isPendingComment(comment.id)"
+                    class="pending-badge"
+                  >
+                    Pendiente de moderación
+                  </span>
+                </header>
+
+                <p>{{ comment.content }}</p>
+
+                <div
+                  v-if="comment.replies?.length"
+                  class="reply-list"
+                >
+                  <article
+                    v-for="reply in comment.replies"
+                    :key="reply.id"
+                    class="comment-card comment-card--reply"
+                  >
+                    <header class="comment-meta">
+                      <strong>{{ reply.user.name }}</strong>
+                      <span>{{ formatCommentDate(reply.createdAt) }}</span>
+                      <span
+                        v-if="isPendingComment(reply.id)"
+                        class="pending-badge"
+                      >
+                        Pendiente de moderación
+                      </span>
+                    </header>
+                    <p>{{ reply.content }}</p>
+                  </article>
+                </div>
+              </article>
+            </div>
+
+            <form
+              v-if="authStore.isAuthenticated"
+              class="comment-form"
+              @submit.prevent="submitComment(thread.id)"
+            >
+              <label :for="`comment-${thread.id}`">
+                Agregar comentario
+              </label>
+              <textarea
+                :id="`comment-${thread.id}`"
+                v-model="commentDrafts[thread.id]"
+                required
+                rows="3"
+                placeholder="Escribe un comentario en este hilo..."
+              ></textarea>
+              <button
+                type="submit"
+                class="primary-button"
+                :disabled="submittingThreadId === thread.id"
+              >
+                {{
+                  submittingThreadId === thread.id
+                    ? 'Enviando...'
+                    : 'Enviar comentario'
+                }}
+              </button>
+            </form>
+          </details>
+        </div>
+      </section>
     </article>
   </section>
 </template>
@@ -106,6 +310,7 @@ import {
   defineComponent,
   h,
   onMounted,
+  reactive,
   ref,
   type PropType,
 } from 'vue'
@@ -116,7 +321,14 @@ import {
   getViewById,
   reactToViewSide,
   unfavoriteView,
+  unpublishView,
 } from '../services/viewService'
+import {
+  createThreadComment,
+  createViewThread,
+  getViewThreads,
+  type CommentThread,
+} from '../services/commentService'
 import { useAuthStore } from '../stores/auth'
 
 const SidePanel = defineComponent({
@@ -236,8 +448,22 @@ const authStore = useAuthStore()
 const view = ref<Awaited<ReturnType<typeof getViewById>> | null>(null)
 const loading = ref(false)
 const favoriteLoading = ref(false)
+const unpublishLoading = ref(false)
 const error = ref('')
 const shareMessage = ref('')
+const actionMessage = ref('')
+const actionMessageType = ref<'success' | 'error'>('success')
+
+const threads = ref<CommentThread[]>([])
+const threadsLoading = ref(false)
+const threadsError = ref('')
+const creatingThread = ref(false)
+const newThreadTitle = ref('')
+const newThreadContent = ref('')
+const threadFormError = ref('')
+const commentDrafts = reactive<Record<string, string>>({})
+const submittingThreadId = ref('')
+const pendingCommentIds = ref<string[]>([])
 
 const sideA = computed(() =>
   view.value?.sides.find((side) => side.type === 'SIDE')
@@ -263,6 +489,184 @@ const canEdit = computed(() => {
     authStore.isSuperadmin
   )
 })
+
+const canUnpublish = computed(() => {
+  return (
+    authStore.isSuperadmin &&
+    view.value?.status !== 'UNPUBLISHED'
+  )
+})
+
+function formatCommentDate(date: string): string {
+  return new Date(date).toLocaleString('es-CR', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  })
+}
+
+function isPendingComment(commentId: string): boolean {
+  return pendingCommentIds.value.includes(commentId)
+}
+
+function markCommentPending(commentId: string) {
+  if (!pendingCommentIds.value.includes(commentId)) {
+    pendingCommentIds.value = [
+      ...pendingCommentIds.value,
+      commentId,
+    ]
+  }
+}
+
+function showActionMessage(
+  message: string,
+  type: 'success' | 'error' = 'success'
+) {
+  actionMessage.value = message
+  actionMessageType.value = type
+
+  window.setTimeout(() => {
+    actionMessage.value = ''
+  }, 4000)
+}
+
+function handleCommentError(
+  err: unknown,
+  fallback: string
+): string {
+  if (!axios.isAxiosError(err)) {
+    return fallback
+  }
+
+  if (err.response?.status === 401) {
+    router.push({
+      name: 'login',
+      query: { redirect: route.fullPath },
+    })
+
+    return 'Debes iniciar sesión para comentar.'
+  }
+
+  if (
+    err.response?.status === 400 ||
+    err.response?.status === 422
+  ) {
+    return err.response.data?.error ?? 'Revisa el contenido del comentario.'
+  }
+
+  return fallback
+}
+
+async function loadThreads() {
+  if (!view.value) return
+
+  threadsLoading.value = true
+  threadsError.value = ''
+
+  try {
+    threads.value = await getViewThreads(view.value.id)
+  } catch (err) {
+    console.error('Error cargando hilos:', err)
+    threadsError.value = 'No se pudieron cargar los hilos de comentarios.'
+  } finally {
+    threadsLoading.value = false
+  }
+}
+
+async function submitNewThread() {
+  if (!view.value || creatingThread.value) return
+
+  const content = newThreadContent.value.trim()
+  const title = newThreadTitle.value.trim()
+
+  threadFormError.value = ''
+
+  if (!content) {
+    threadFormError.value = 'Escribe el comentario inicial del hilo.'
+    return
+  }
+
+  creatingThread.value = true
+
+  try {
+    const thread = await createViewThread(view.value.id, {
+      title: title || undefined,
+      content,
+    })
+
+    threads.value = [
+      ...threads.value,
+      thread,
+    ]
+
+    thread.comments?.forEach((comment) => {
+      markCommentPending(comment.id)
+    })
+
+    newThreadTitle.value = ''
+    newThreadContent.value = ''
+    showActionMessage(
+      'Hilo enviado. El comentario inicial está pendiente de moderación.'
+    )
+  } catch (err) {
+    console.error('Error creando hilo:', err)
+    threadFormError.value = handleCommentError(
+      err,
+      'No se pudo crear el hilo.'
+    )
+  } finally {
+    creatingThread.value = false
+  }
+}
+
+async function submitComment(threadId: string) {
+  if (!view.value || submittingThreadId.value) return
+
+  const content = (commentDrafts[threadId] ?? '').trim()
+
+  if (!content) {
+    showActionMessage(
+      'Escribe un comentario antes de enviarlo.',
+      'error'
+    )
+    return
+  }
+
+  submittingThreadId.value = threadId
+
+  try {
+    const comment = await createThreadComment(
+      view.value.id,
+      threadId,
+      content
+    )
+
+    threads.value = threads.value.map((thread) => {
+      if (thread.id !== threadId) return thread
+
+      return {
+        ...thread,
+        comments: [
+          ...(thread.comments ?? []),
+          comment,
+        ],
+      }
+    })
+
+    markCommentPending(comment.id)
+    commentDrafts[threadId] = ''
+    showActionMessage(
+      'Comentario enviado. Estado: pendiente de moderación.'
+    )
+  } catch (err) {
+    console.error('Error enviando comentario:', err)
+    showActionMessage(
+      handleCommentError(err, 'No se pudo enviar el comentario.'),
+      'error'
+    )
+  } finally {
+    submittingThreadId.value = ''
+  }
+}
 
 function saveToHistory() {
   if (!view.value) return
@@ -298,6 +702,7 @@ async function loadView() {
   try {
     view.value = await getViewById(String(route.params.id))
     saveToHistory()
+    await loadThreads()
   } catch (err) {
     console.error('Error cargando detalle:', err)
 
@@ -325,6 +730,17 @@ async function toggleFavorite() {
       ...view.value,
       isFavorite: result.isFavorite,
     }
+
+    const nextFavorites = result.isFavorite
+      ? Array.from(new Set([
+          ...authStore.favorites,
+          view.value.id,
+        ]))
+      : authStore.favorites.filter(
+          id => id !== view.value?.id
+        )
+
+    authStore.setFavorites(nextFavorites)
   } catch (err) {
     console.error('Error actualizando favorito:', err)
   } finally {
@@ -387,6 +803,37 @@ async function shareView() {
     }, 2000)
   } catch (err) {
     console.error('No se pudo compartir:', err)
+  }
+}
+
+async function handleUnpublish() {
+  if (!view.value || !canUnpublish.value || unpublishLoading.value) {
+    return
+  }
+
+  const confirmed = window.confirm(
+    '¿Deseas despublicar esta publicación? Dejará de aparecer en el tablero.'
+  )
+
+  if (!confirmed) return
+
+  unpublishLoading.value = true
+
+  try {
+    await unpublishView(view.value.id)
+    view.value = {
+      ...view.value,
+      status: 'UNPUBLISHED',
+    }
+    showActionMessage('Publicación despublicada correctamente.')
+  } catch (err) {
+    console.error('Error despublicando publicación:', err)
+    showActionMessage(
+      'No se pudo despublicar la publicación.',
+      'error'
+    )
+  } finally {
+    unpublishLoading.value = false
   }
 }
 
@@ -475,6 +922,8 @@ onMounted(loadView)
 }
 
 .secondary-button,
+.danger-button,
+.primary-button,
 .reaction-button,
 .state-card button {
   min-height: 40px;
@@ -484,6 +933,25 @@ onMounted(loadView)
   background: var(--surface);
   color: var(--text-primary);
   cursor: pointer;
+}
+
+.danger-button {
+  border-color: #dc2626;
+  background: #dc2626;
+  color: #ffffff;
+}
+
+.primary-button {
+  width: fit-content;
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #ffffff;
+}
+
+.danger-button:disabled,
+.primary-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .reaction-button.active {
@@ -587,6 +1055,172 @@ onMounted(loadView)
   font-size: 0.9rem;
 }
 
+.comments-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-top: 2rem;
+  padding-top: 2rem;
+  border-top: 1px solid var(--border);
+}
+
+.comments-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.comments-header h2,
+.new-thread-form h3 {
+  margin: 0;
+}
+
+.thread-count,
+.pending-badge {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
+  background: var(--surface-muted);
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.pending-badge {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.moderation-notice {
+  margin: 0;
+  padding: 0.9rem 1rem;
+  border: 1px solid #f59e0b;
+  border-radius: 10px;
+  background: #fffbeb;
+  color: #92400e;
+  line-height: 1.5;
+}
+
+.new-thread-form,
+.comment-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface-muted);
+}
+
+.new-thread-form label,
+.comment-form label {
+  font-weight: 700;
+}
+
+.new-thread-form input,
+.new-thread-form textarea,
+.comment-form textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text-primary);
+  font: inherit;
+  resize: vertical;
+}
+
+.inline-error,
+.comments-state--error {
+  color: #dc2626;
+}
+
+.login-hint,
+.comments-state {
+  margin: 0;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text-secondary);
+}
+
+.login-hint a {
+  color: var(--accent-strong);
+  font-weight: 700;
+}
+
+.thread-list,
+.comment-list,
+.reply-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.thread-card {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface-muted);
+  overflow: hidden;
+}
+
+.thread-card summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem;
+  color: var(--text-primary);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.thread-card[open] summary {
+  border-bottom: 1px solid var(--border);
+}
+
+.comment-list,
+.comment-form {
+  margin: 1rem;
+}
+
+.comment-card {
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+}
+
+.comment-card p {
+  margin: 0.75rem 0 0;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.comment-card--reply {
+  margin-left: 1.25rem;
+  background: var(--surface-muted);
+}
+
+.comment-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+}
+
+.comment-meta strong {
+  color: var(--text-primary);
+}
+
 @media (max-width: 860px) {
   .detail-header {
     flex-direction: column;
@@ -594,6 +1228,16 @@ onMounted(loadView)
 
   .sides-grid {
     grid-template-columns: 1fr;
+  }
+
+  .comments-header,
+  .thread-card summary {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .comment-card--reply {
+    margin-left: 0;
   }
 }
 </style>
