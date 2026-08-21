@@ -121,6 +121,7 @@
 import {
   computed,
   onMounted,
+  onUnmounted,
   ref,
 } from 'vue'
 
@@ -159,6 +160,18 @@ import type {
 import type {
   Hashtag,
 } from '../models/hashtag'
+import {
+  CACHE_KEYS,
+  CACHE_TTL,
+  CacheService,
+} from '../services/cacheService'
+
+interface DashboardFilters {
+  category: string
+  hashtag: string
+  sort: SortOption
+  page: number
+}
 
 
 // =====================================
@@ -178,6 +191,11 @@ type SortOption =
   | 'recent'
   | 'sideA'
   | 'sideB'
+
+const cachedFilters =
+  CacheService.getStale<DashboardFilters>(
+    CACHE_KEYS.filters
+  )
 
 
 // =====================================
@@ -221,13 +239,13 @@ const error = ref('')
 const selectedCategory = ref(
   typeof route.query.category === 'string'
     ? route.query.category
-    : ''
+    : cachedFilters?.category ?? ''
 )
 
 const selectedHashtag = ref(
   typeof route.query.hashtag === 'string'
     ? route.query.hashtag
-    : ''
+    : cachedFilters?.hashtag ?? ''
 )
 
 const selectedSort = ref<SortOption>(
@@ -235,11 +253,11 @@ const selectedSort = ref<SortOption>(
   route.query.sort === 'sideB' ||
   route.query.sort === 'recent'
     ? route.query.sort
-    : 'recent'
+    : cachedFilters?.sort ?? 'recent'
 )
 
 const currentPage = ref(
-  Number(route.query.page) || 1
+  Number(route.query.page) || cachedFilters?.page || 1
 )
 
 const search = ref(
@@ -280,6 +298,13 @@ const hasNextPage = computed(
 // =====================================
 
 function updateQueryParams() {
+  CacheService.set(CACHE_KEYS.filters, {
+    category: selectedCategory.value,
+    hashtag: selectedHashtag.value,
+    sort: selectedSort.value,
+    page: currentPage.value,
+  })
+
   router.replace({
     query: {
       category:
@@ -440,6 +465,19 @@ async function loadViews() {
 // =====================================
 
 async function loadCategories() {
+  const cached =
+    CacheService.get<Category[]>(
+      CACHE_KEYS.categories,
+      CACHE_TTL.categories
+    ) ??
+    CacheService.getStale<Category[]>(
+      CACHE_KEYS.categories
+    )
+
+  if (cached) {
+    categories.value = cached
+  }
+
   try {
     const result =
       await getCategories()
@@ -464,6 +502,21 @@ async function loadCategories() {
 async function loadHashtags(
   query = ''
 ) {
+  if (!query) {
+    const cached =
+      CacheService.get<Hashtag[]>(
+        CACHE_KEYS.hashtags,
+        CACHE_TTL.hashtags
+      ) ??
+      CacheService.getStale<Hashtag[]>(
+        CACHE_KEYS.hashtags
+      )
+
+    if (cached) {
+      hashtags.value = cached
+    }
+  }
+
   try {
     const result =
       await getHashtags(
@@ -648,7 +701,21 @@ async function nextPage() {
 // CARGAR DATOS AL ENTRAR
 // =====================================
 
+async function reloadFreshData() {
+  await Promise.all([
+    loadCategories(),
+    loadHashtags(),
+  ])
+
+  await loadViews()
+}
+
 onMounted(async () => {
+  window.addEventListener(
+    'lasdoscaras:online',
+    reloadFreshData
+  )
+
   await Promise.all([
     loadCategories(),
     loadHashtags(),
@@ -663,6 +730,13 @@ onMounted(async () => {
   } else {
     await loadViews()
   }
+})
+
+onUnmounted(() => {
+  window.removeEventListener(
+    'lasdoscaras:online',
+    reloadFreshData
+  )
 })
 </script>
 

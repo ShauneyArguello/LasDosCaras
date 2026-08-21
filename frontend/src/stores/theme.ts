@@ -1,12 +1,25 @@
 import { defineStore } from 'pinia'
+import {
+  CACHE_KEYS,
+  CacheService,
+} from '../services/cacheService'
 
 type Theme = 'light' | 'dark'
 
-const STORAGE_KEY = 'lasdoscaras_theme'
+function getInitialTheme(): Theme {
+  const savedTheme = CacheService.getStale<Theme>(CACHE_KEYS.theme)
+  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
+
+  return savedTheme ?? (prefersDark ? 'dark' : 'light')
+}
+
+export function applyInitialTheme() {
+  document.documentElement.dataset.theme = getInitialTheme()
+}
 
 export const useThemeStore = defineStore('theme', {
   state: () => ({
-    theme: 'light' as Theme,
+    theme: getInitialTheme(),
   }),
 
   getters: {
@@ -15,16 +28,13 @@ export const useThemeStore = defineStore('theme', {
 
   actions: {
     loadTheme() {
-      const savedTheme = localStorage.getItem(STORAGE_KEY) as Theme | null
-      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
-
-      this.theme = savedTheme ?? (prefersDark ? 'dark' : 'light')
+      this.theme = getInitialTheme()
       this.applyTheme()
     },
 
     toggleTheme() {
       this.theme = this.theme === 'dark' ? 'light' : 'dark'
-      localStorage.setItem(STORAGE_KEY, this.theme)
+      CacheService.set(CACHE_KEYS.theme, this.theme)
       this.applyTheme()
     },
 

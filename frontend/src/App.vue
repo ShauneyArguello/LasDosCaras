@@ -1,6 +1,7 @@
 <template>
   <div class="app-layout">
     <AppHeader />
+    <NetworkBanner />
 
     <div class="app-body">
       <AppSidebar />
@@ -11,6 +12,7 @@
     </div>
 
     <AppFooter />
+    <AppNotifications />
   </div>
 </template>
 
@@ -19,6 +21,8 @@ import { onMounted } from 'vue'
 import AppHeader from './components/layout/AppHeader.vue'
 import AppSidebar from './components/layout/AppSidebar.vue'
 import AppFooter from './components/layout/AppFooter.vue'
+import AppNotifications from './components/common/AppNotifications.vue'
+import NetworkBanner from './components/common/NetworkBanner.vue'
 import { useThemeStore } from './stores/theme'
 
 const themeStore = useThemeStore()

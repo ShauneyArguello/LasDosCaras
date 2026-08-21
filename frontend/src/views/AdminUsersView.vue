@@ -207,6 +207,10 @@ import {
 import type {
   AdminUser,
 } from '../models/user'
+import {
+  CACHE_KEYS,
+  CacheService,
+} from '../services/cacheService'
 
 
 const users =
@@ -256,24 +260,13 @@ const totalPages =
 
 function getCurrentUserId():
   string | null {
-
-  const storedUser =
-    localStorage.getItem(
-      'user'
-    )
-
-  if (!storedUser) {
-    return null
-  }
-
-  try {
-    const user =
-      JSON.parse(storedUser)
-
-    return user.id ?? null
-  } catch {
-    return null
-  }
+  return (
+    CacheService.getStale<{
+      user?: {
+        id?: string
+      } | null
+    }>(CACHE_KEYS.auth)?.user?.id ?? null
+  )
 
 }
 

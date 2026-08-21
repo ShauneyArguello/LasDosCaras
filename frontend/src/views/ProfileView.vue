@@ -379,6 +379,10 @@ import type {
 import {
   useAuthStore,
 } from '../stores/auth'
+import {
+  CACHE_KEYS,
+  CacheService,
+} from '../services/cacheService'
 
 
 interface HistoryItem {
@@ -509,25 +513,10 @@ function formatDate(
 
 
 function loadHistory() {
-
-  try {
-
-    const stored =
-      localStorage.getItem(
-        'lasdoscaras_history'
-      )
-
-    history.value =
-      stored
-        ? JSON.parse(stored)
-        : []
-
-  } catch {
-
-    history.value =
-      []
-
-  }
+  history.value =
+    CacheService.getStale<HistoryItem[]>(
+      CACHE_KEYS.history
+    ) ?? []
 }
 
 
@@ -675,9 +664,7 @@ function clearHistory() {
   history.value =
     []
 
-  localStorage.removeItem(
-    'lasdoscaras_history'
-  )
+  CacheService.remove(CACHE_KEYS.history)
 
   showMessage(
     'Historial eliminado correctamente.',
