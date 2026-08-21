@@ -87,7 +87,11 @@ const fieldErrors = reactive({
 
 const showPassword = ref(false)
 const isSubmitting = ref(false)
-const errorMessage = ref('')
+const errorMessage = ref(
+  route.query.expired === '1'
+    ? 'Su sesión ha expirado.'
+    : ''
+)
 
 function clearMessages() {
   errorMessage.value = ''

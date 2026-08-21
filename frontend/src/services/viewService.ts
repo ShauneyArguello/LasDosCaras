@@ -4,6 +4,10 @@ import type {
   ViewListResponse,
   ViewSource,
 } from '../models/view'
+import {
+  CACHE_KEYS,
+  CacheService,
+} from './cacheService'
 
 export interface ViewFilters {
   category?: string
@@ -39,14 +43,28 @@ export interface SaveViewPayload {
 export async function getViews(
   filters: ViewFilters = {}
 ): Promise<ViewListResponse> {
-  const response = await api.get<ViewListResponse>(
-    '/api/views',
-    {
-      params: filters,
-    }
-  )
+  try {
+    const response = await api.get<ViewListResponse>(
+      '/api/views',
+      {
+        params: filters,
+      }
+    )
 
-  return response.data
+    CacheService.set(getViewsCacheKey(filters), response.data)
+
+    return response.data
+  } catch (error) {
+    const cached =
+      CacheService.getStale<ViewListResponse>(getViewsCacheKey(filters))
+
+    if (cached) {
+      window.dispatchEvent(new CustomEvent('lasdoscaras:cached-data'))
+      return cached
+    }
+
+    throw error
+  }
 }
 
 export async function searchViews(
@@ -139,4 +157,20 @@ export async function unpublishView(
   await api.patch(
     `/api/views/${viewId}/unpublish`
   )
+}
+
+export function getViewsCacheKey(filters: ViewFilters = {}) {
+  const normalized = Object.keys(filters)
+    .sort()
+    .reduce<Record<string, string | number>>((result, key) => {
+      const value = filters[key as keyof ViewFilters]
+
+      if (value !== undefined && value !== '') {
+        result[key] = value
+      }
+
+      return result
+    }, {})
+
+  return `${CACHE_KEYS.views}:${JSON.stringify(normalized)}`
 }

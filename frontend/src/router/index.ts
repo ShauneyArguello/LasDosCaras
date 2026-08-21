@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { CacheService } from '../services/cacheService'
 
 const routes = [
   {
@@ -134,18 +135,43 @@ const router = createRouter({
   routes,
 })
 
+function readStoredAuth() {
+  const cachedAuth = CacheService.getRaw('lasdoscaras_auth')
+
+  if (cachedAuth) {
+    try {
+      const parsed = JSON.parse(cachedAuth)
+      const value = parsed?.value ?? parsed
+
+      return {
+        token: value?.token ?? '',
+        user: value?.user ?? null,
+      }
+    } catch {
+      return {
+        token: '',
+        user: null,
+      }
+    }
+  }
+
+  return {
+    token: CacheService.getRaw('token') ?? '',
+    user: JSON.parse(CacheService.getRaw('user') ?? 'null'),
+  }
+}
+
 router.beforeEach((to) => {
-  const token = localStorage.getItem('token')
+  const storedAuth = readStoredAuth()
+  const token = storedAuth.token
 
   const isAuthenticated = Boolean(token)
 
-  const storedUser = localStorage.getItem('user')
-
   let role = ''
 
-  if (storedUser) {
+  if (storedAuth.user) {
     try {
-      const user = JSON.parse(storedUser)
+      const user = storedAuth.user
 
       role =
         (

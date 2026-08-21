@@ -330,6 +330,11 @@ import {
   type CommentThread,
 } from '../services/commentService'
 import { useAuthStore } from '../stores/auth'
+import {
+  CACHE_KEYS,
+  CacheService,
+} from '../services/cacheService'
+import { useNotificationStore } from '../stores/notifications'
 
 const SidePanel = defineComponent({
   name: 'SidePanel',
@@ -444,6 +449,7 @@ const SidePanel = defineComponent({
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
+const notifications = useNotificationStore()
 
 const view = ref<Awaited<ReturnType<typeof getViewById>> | null>(null)
 const loading = ref(false)
@@ -671,17 +677,8 @@ async function submitComment(threadId: string) {
 function saveToHistory() {
   if (!view.value) return
 
-  const stored = localStorage.getItem('lasdoscaras_history')
-  let history: unknown[] = []
-
-  if (stored) {
-    try {
-      const parsedHistory: unknown = JSON.parse(stored)
-      history = Array.isArray(parsedHistory) ? parsedHistory : []
-    } catch {
-      history = []
-    }
-  }
+  const history =
+    CacheService.getStale<unknown[]>(CACHE_KEYS.history) ?? []
 
   const entry = {
     id: view.value.id,
@@ -702,7 +699,7 @@ function saveToHistory() {
     }),
   ].slice(0, 20)
 
-  localStorage.setItem('lasdoscaras_history', JSON.stringify(next))
+  CacheService.set(CACHE_KEYS.history, next)
 }
 
 async function loadView() {
@@ -710,7 +707,15 @@ async function loadView() {
   error.value = ''
 
   try {
-    view.value = await getViewById(String(route.params.id))
+    const loadedView = await getViewById(String(route.params.id))
+
+    view.value = {
+      ...loadedView,
+      isFavorite:
+        loadedView.isFavorite ??
+        authStore.favorites.includes(loadedView.id),
+    }
+
     saveToHistory()
     await loadThreads()
   } catch (err) {
@@ -753,6 +758,12 @@ async function toggleFavorite() {
     authStore.setFavorites(nextFavorites)
   } catch (err) {
     console.error('Error actualizando favorito:', err)
+    notifications.notify(
+      err instanceof Error
+        ? err.message
+        : 'No se pudo actualizar el favorito.',
+      'error'
+    )
   } finally {
     favoriteLoading.value = false
   }
@@ -791,6 +802,12 @@ async function handleReaction(
     }
   } catch (err) {
     console.error('Error registrando reaccion:', err)
+    notifications.notify(
+      err instanceof Error
+        ? err.message
+        : 'No se pudo registrar la reacción.',
+      'error'
+    )
   }
 }
 
@@ -813,6 +830,10 @@ async function shareView() {
     }, 2000)
   } catch (err) {
     console.error('No se pudo compartir:', err)
+    notifications.notify(
+      'No se pudo compartir la publicación.',
+      'error'
+    )
   }
 }
 

@@ -308,9 +308,14 @@ import {
   type SaveViewPayload,
 } from '../services/viewService'
 import { useDebounce } from '../composables/useDebounce'
+import {
+  CACHE_KEYS,
+  CacheService,
+} from '../services/cacheService'
 
 type SourceForm = Omit<ViewSource, 'id'>
 type SideKey = 'side' | 'counterpart'
+type DraftForm = typeof form
 
 const SourceEditor = defineComponent({
   name: 'SourceEditor',
@@ -700,6 +705,43 @@ function fillFormFromView(view: Awaited<ReturnType<typeof getViewById>>) {
   form.hashtags = view.hashtags?.map((tag) => tag.name) ?? []
 }
 
+function fillFormFromDraft(draft: DraftForm) {
+  form.title = draft.title ?? ''
+  form.categoryId = draft.categoryId ?? ''
+  form.side.title = draft.side?.title ?? ''
+  form.side.description = draft.side?.description ?? ''
+  form.side.sources = draft.side?.sources?.length
+    ? draft.side.sources
+    : [createEmptySource()]
+  form.counterpart.title = draft.counterpart?.title ?? ''
+  form.counterpart.description = draft.counterpart?.description ?? ''
+  form.counterpart.sources = draft.counterpart?.sources?.length
+    ? draft.counterpart.sources
+    : [createEmptySource()]
+  form.hashtags = draft.hashtags ?? []
+}
+
+function restoreDraftIfAvailable() {
+  if (isEditing.value) return
+
+  const draft =
+    CacheService.getStale<DraftForm>(
+      CACHE_KEYS.draft
+    )
+
+  if (!draft) return
+
+  const shouldRestore = window.confirm(
+    'Hay un borrador guardado. ¿Deseas restaurarlo?'
+  )
+
+  if (shouldRestore) {
+    fillFormFromDraft(draft)
+  } else {
+    CacheService.remove(CACHE_KEYS.draft)
+  }
+}
+
 async function loadInitialData() {
   isLoading.value = true
   loadError.value = ''
@@ -714,6 +756,8 @@ async function loadInitialData() {
 
     if (currentView) {
       fillFormFromView(currentView)
+    } else {
+      restoreDraftIfAvailable()
     }
 
     initialSnapshot.value = JSON.stringify(form)
@@ -797,6 +841,7 @@ async function handleSubmit() {
       : await createView(payload)
 
     hasSubmitted.value = true
+    CacheService.remove(CACHE_KEYS.draft)
     initialSnapshot.value = JSON.stringify(form)
     await router.push(`/views/${savedView.id}`)
   } catch (error) {
@@ -815,10 +860,43 @@ function cancel() {
   }
 
   allowNavigation.value = true
+  CacheService.remove(CACHE_KEYS.draft)
   router.back()
 }
 
 watch(debouncedHashtagQuery, loadHashtagSuggestions)
+
+watch(
+  form,
+  () => {
+    if (
+      isEditing.value ||
+      isLoading.value ||
+      hasSubmitted.value
+    ) {
+      return
+    }
+
+    CacheService.set(CACHE_KEYS.draft, {
+      title: form.title,
+      categoryId: form.categoryId,
+      side: {
+        title: form.side.title,
+        description: form.side.description,
+        sources: form.side.sources,
+      },
+      counterpart: {
+        title: form.counterpart.title,
+        description: form.counterpart.description,
+        sources: form.counterpart.sources,
+      },
+      hashtags: form.hashtags,
+    })
+  },
+  {
+    deep: true,
+  }
+)
 
 onBeforeRouteLeave(() => {
   if (hasSubmitted.value || allowNavigation.value || !isDirty.value) {

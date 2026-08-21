@@ -130,6 +130,13 @@ import {
 import {
   useAuthStore,
 } from '../stores/auth'
+import {
+  CACHE_KEYS,
+  CacheService,
+} from '../services/cacheService'
+import {
+  useNotificationStore,
+} from '../stores/notifications'
 
 
 const props = defineProps<{
@@ -139,6 +146,9 @@ const props = defineProps<{
 
 const authStore =
   useAuthStore()
+
+const notifications =
+  useNotificationStore()
 
 
 const favoriteLoading =
@@ -189,21 +199,11 @@ const formattedDate =
 
 function getStoredFavorites():
   string[] {
-
-  const stored =
-    localStorage.getItem(
-      'lasdoscaras_favorites'
-    )
-
-  if (!stored) {
-    return []
-  }
-
-  try {
-    return JSON.parse(stored)
-  } catch {
-    return []
-  }
+  return (
+    CacheService.getStale<string[]>(
+      CACHE_KEYS.favorites
+    ) ?? []
+  )
 
 }
 
@@ -211,11 +211,7 @@ function getStoredFavorites():
 function saveStoredFavorites(
   favorites: string[]
 ) {
-
-  localStorage.setItem(
-    'lasdoscaras_favorites',
-    JSON.stringify(favorites)
-  )
+  authStore.setFavorites(favorites)
 
 }
 
@@ -283,6 +279,11 @@ async function toggleFavorite() {
 
       removeFavoriteFromStorage()
 
+      notifications.notify(
+        'Publicación eliminada de favoritos.',
+        'success'
+      )
+
     } else {
 
       await favoriteView(
@@ -294,6 +295,11 @@ async function toggleFavorite() {
 
       addFavoriteToStorage()
 
+      notifications.notify(
+        'Publicación agregada a favoritos.',
+        'success'
+      )
+
     }
 
   } catch (error) {
@@ -301,6 +307,13 @@ async function toggleFavorite() {
     console.error(
       'Error actualizando favorito:',
       error
+    )
+
+    notifications.notify(
+      error instanceof Error
+        ? error.message
+        : 'No se pudo actualizar el favorito.',
+      'error'
     )
 
   } finally {
@@ -341,6 +354,11 @@ async function shareView() {
     shareMessage.value =
       'Enlace copiado'
 
+    notifications.notify(
+      'Enlace copiado.',
+      'success'
+    )
+
     setTimeout(() => {
       shareMessage.value = ''
     }, 2000)
@@ -350,6 +368,11 @@ async function shareView() {
     console.error(
       'No se pudo compartir:',
       error
+    )
+
+    notifications.notify(
+      'No se pudo compartir la publicación.',
+      'error'
     )
 
   }
