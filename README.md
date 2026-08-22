@@ -1,133 +1,191 @@
-# Doscaras API
+# LasDosCaras
 
-REST API for a political-views social network. Authenticated users publish a
-political view made of two opposing sides (`side` and `counterpart`), each
-with a title, description, and one or more sources (link, YouTube, or
-document). Users can like/dislike a view and open comment threads on it.
-Superadmins can unpublish a view from the public board.
+LasDosCaras es una aplicación web de una sola página (SPA) que presenta dos perspectivas opuestas de un mismo tema. Su objetivo es fomentar el pensamiento crítico y el debate informado mediante publicaciones que muestran una postura (Lado A) y una contrapostura (Lado B), cada una con sus propias fuentes y reacciones.
 
-## Stack
+Este repositorio contiene únicamente el **frontend** del proyecto. El REST API utilizado por la aplicación se ejecuta de manera independiente y no forma parte de este repositorio.
 
-- Node.js + Express + TypeScript
-- PostgreSQL + Prisma ORM
-- JWT auth (`jsonwebtoken` + `bcryptjs`)
-- Zod request validation
-- Multer for document uploads
+## Integrantes
 
-Dependencies are pinned to Express 4 / Zod 3 / TypeScript 5 / Prisma 5 for
-compatibility with Node 18 and with the code in this repo (avoid the Express
-5 / Zod 4 / Prisma 7 majors that `npm install` would otherwise resolve to).
+- Daniela Rodríguez
+- Shauney Arguello
+- Andrea Salazar
 
-## Setup
+## Tecnologías
+
+- Vue 3
+- TypeScript
+- Vite
+- Pinia
+- Vue Router
+- Axios
+- CSS3
+
+## Funcionalidades principales
+
+- Registro e inicio de sesión con JWT.
+- Tablero paginado con filtros y búsqueda global.
+- Publicaciones con postura y contrapostura independientes.
+- Reacciones independientes para el Lado A y el Lado B.
+- Creación y edición de publicaciones con fuentes y hashtags.
+- Hilos de comentarios, favoritos y perfiles de usuario.
+- Historial local de publicaciones visitadas.
+- Panel de superadministración para usuarios, categorías y moderación.
+- Tema claro y oscuro.
+- Manejo centralizado de errores, notificaciones y conectividad.
+- Funcionamiento de solo lectura con información almacenada cuando el API no está disponible.
+
+## Requisitos previos
+
+- Node.js y npm instalados.
+- El REST API de LasDosCaras ejecutándose de forma independiente.
+
+## Instalación
+
+1. Clonar el repositorio:
+
+```bash
+git clone https://github.com/ShauneyArguello/LasDosCaras.git
+```
+
+2. Entrar en la carpeta del frontend:
+
+```bash
+cd LasDosCaras/frontend
+```
+
+3. Instalar las dependencias:
 
 ```bash
 npm install
-cp .env.example .env   # edit DATABASE_URL, JWT_SECRET, SUPERADMIN_* as needed
-npx prisma migrate dev --name init
-npx prisma db seed      # seeds default categories + a superadmin user
-npm run dev              # http://localhost:3000
 ```
 
-## Docker
+4. Crear el archivo `.env` tomando como referencia `.env.example`:
+
+```env
+VITE_API_URL=http://localhost:3000
+```
+
+La URL debe ajustarse si el API se ejecuta en otra dirección o puerto. El archivo `.env` no debe subirse al repositorio.
+
+## Ejecución
+
+Desde la carpeta `frontend`, iniciar el entorno de desarrollo:
 
 ```bash
-docker compose up -d --build   # http://localhost:3000
+npm run dev
 ```
 
-Starts Postgres and the API. On startup the API container runs
-`prisma migrate deploy` and seeds default categories + the superadmin user
-(set `RUN_SEED=false` to skip seeding). Config is read from `.env` in this
-directory (`JWT_SECRET`, `SUPERADMIN_*`, etc. — `DATABASE_URL` is ignored in
-favor of the in-network `db` service). Uploaded files persist in the
-`uploads` named volume; Postgres data persists in `pgdata`.
+Vite mostrará la dirección local de la aplicación, normalmente `http://localhost:5173`.
 
-## Data model
+Para comprobar los tipos de TypeScript y generar la versión de producción:
 
-- **User** — `email`, `password` (hashed), `name`, `role` (`USER` | `SUPERADMIN`)
-- **Category** — flat list, e.g. Economy, Healthcare, Immigration
-- **PoliticalView** — belongs to a `Category` and an author `User`;
-  `status` is `PUBLISHED` | `UNPUBLISHED`
-- **ViewSide** — one of `SIDE` / `COUNTERPART` per `PoliticalView`; each has
-  `title`, `description`, and `Source[]`
-- **Source** — `type` (`LINK` | `YOUTUBE` | `DOCUMENT`), `url`, optional `label`
-- **Reaction** — one `LIKE`/`DISLIKE` per user per `PoliticalView` (upsert)
-- **CommentThread** — belongs to a `PoliticalView`; a view can have many
-- **Comment** — belongs to a thread, optional `parentId` for one-level replies
-
-## Auth
-
-All protected routes expect `Authorization: Bearer <token>`.
-
-| Method | Path | Auth | Description |
-|---|---|---|---|
-| POST | `/api/auth/register` | — | Create account, returns token |
-| POST | `/api/auth/login` | — | Returns token |
-| GET | `/api/auth/me` | user | Current user profile |
-
-## Categories
-
-| Method | Path | Auth | Description |
-|---|---|---|---|
-| GET | `/api/categories` | — | List all categories |
-| POST | `/api/categories` | superadmin | Create a category |
-
-## Political views (the board)
-
-| Method | Path | Auth | Description |
-|---|---|---|---|
-| GET | `/api/political-views?category=&sortBy=recent\|likes\|dislikes&page=&pageSize=` | — | List active (published) views |
-| POST | `/api/political-views` | user | Create a view (`categoryId`, `side`, `counterpart`) |
-| GET | `/api/political-views/:id` | — | Full detail incl. sides/sources/counts |
-| PATCH | `/api/political-views/:id/unpublish` | superadmin | Remove from the board |
-
-Create payload shape:
-
-```json
-{
-  "categoryId": "uuid",
-  "side": {
-    "title": "...",
-    "description": "...",
-    "sources": [{ "type": "LINK", "url": "https://...", "label": "optional" }]
-  },
-  "counterpart": {
-    "title": "...",
-    "description": "...",
-    "sources": [{ "type": "YOUTUBE", "url": "https://youtube.com/watch?v=..." }]
-  }
-}
+```bash
+npm run build
 ```
 
-## Reactions
+Para visualizar la versión compilada:
 
-| Method | Path | Auth | Description |
-|---|---|---|---|
-| POST | `/api/political-views/:id/reactions` | user | Body `{ "type": "LIKE" \| "DISLIKE" }`; upserts (switching type is allowed) |
-| DELETE | `/api/political-views/:id/reactions` | user | Remove your own reaction |
+```bash
+npm run preview
+```
 
-## Comment threads & comments
+## Variables de entorno
 
-| Method | Path | Auth | Description |
-|---|---|---|---|
-| GET | `/api/political-views/:id/threads` | — | List threads (with top-level comments + replies) |
-| POST | `/api/political-views/:id/threads` | user | Body `{ "title"?, "content" }` — opens a thread with its first comment |
-| GET | `/api/political-views/:id/threads/:threadId/comments` | — | List top-level comments + replies |
-| POST | `/api/political-views/:id/threads/:threadId/comments` | user | Body `{ "content", "parentId"? }` — `parentId` makes it a reply |
+| Variable | Descripción | Ejemplo |
+| --- | --- | --- |
+| `VITE_API_URL` | URL base del REST API | `http://localhost:3000` |
 
-## Document uploads
+El repositorio incluye `frontend/.env.example`. No se deben guardar contraseñas, tokens JWT ni valores secretos en Git.
 
-| Method | Path | Auth | Description |
-|---|---|---|---|
-| POST | `/api/uploads/document` | user | multipart field `file` (PDF/DOC/DOCX/TXT, max 20MB). Returns `{ "url": "/uploads/xyz.pdf" }` to use as a `DOCUMENT` source's `url` |
+## Rutas principales
 
-Uploaded files are served statically from `/uploads/*`.
+| Ruta | Pantalla | Acceso |
+| --- | --- | --- |
+| `/board` | Tablero principal | Público |
+| `/login` | Inicio de sesión | No autenticados |
+| `/register` | Registro | No autenticados |
+| `/categories/:id` | Página de categoría | Público |
+| `/views/:id` | Detalle de publicación | Público |
+| `/views/new` | Crear publicación | Autenticado |
+| `/views/:id/edit` | Editar publicación | Autor o superadmin |
+| `/profile` | Perfil del usuario | Autenticado |
+| `/authors/:id` | Perfil público de autor | Público |
+| `/search?q=` | Resultados de búsqueda | Público |
+| `/admin/users` | Gestión de usuarios | Superadmin |
+| `/admin/categories` | Gestión de categorías | Superadmin |
+| `/admin/moderation` | Moderación de publicaciones | Superadmin |
+| `/403` | Acceso denegado | Público |
 
-## Notes / tradeoffs
+Las direcciones inexistentes muestran una página personalizada de error 404.
 
-- Sorting the board by `likes`/`dislikes` computes counts for all matching
-  published views, sorts in memory, then paginates — fine at board scale;
-  would need a materialized count column for very large datasets.
-- JWTs are long-lived (`JWT_EXPIRES_IN`, default 7d) with no refresh-token
-  flow — add one if session revocation becomes a requirement.
-- Comments support one level of replies (reply-to-a-reply is not modeled);
-  extend `Comment.parentId` handling if deeper nesting is needed.
+## Caché y localStorage
+
+La aplicación utiliza un `CacheService` centralizado. Su finalidad es restaurar la sesión y mostrar información guardada cuando el API no está disponible.
+
+| Clave | Información almacenada |
+| --- | --- |
+| `lasdoscaras_auth` | Token JWT y datos del usuario autenticado |
+| `lasdoscaras_categories` | Categorías disponibles |
+| `lasdoscaras_hashtags` | Hashtags disponibles |
+| `lasdoscaras_filters` | Últimos filtros utilizados |
+| `lasdoscaras_favorites` | Identificadores de favoritos |
+| `lasdoscaras_draft` | Borrador de publicación |
+| `lasdoscaras_theme` | Tema claro u oscuro |
+| `lasdoscaras_history` | Últimas 20 publicaciones visitadas |
+
+Las contraseñas nunca se almacenan en `localStorage`. Al cerrar sesión o recibir una respuesta HTTP 401 se elimina la información de autenticación.
+
+## Manejo de errores y conectividad
+
+- Las solicitudes al API están centralizadas en la capa de servicios.
+- Axios agrega el JWT a las solicitudes autenticadas.
+- Se manejan los errores HTTP 400, 401, 403, 404, 409, 422 y 500.
+- Las solicitudes GET pueden reintentarse después de un error de red.
+- Se muestra un banner cuando no existe conexión con el servidor.
+- Las acciones de escritura se bloquean cuando el API no está disponible.
+- Al recuperar la conexión se solicitan datos actualizados.
+
+## Estructura del frontend
+
+```text
+frontend/
+├── public/
+├── src/
+│   ├── assets/
+│   ├── components/
+│   ├── composables/
+│   ├── models/
+│   ├── router/
+│   ├── services/
+│   ├── stores/
+│   ├── views/
+│   ├── App.vue
+│   ├── main.ts
+│   └── style.css
+├── .env.example
+├── package.json
+└── vite.config.ts
+```
+
+## Capturas de pantalla
+
+Antes de la entrega final se deben agregar aquí capturas actualizadas de:
+
+- Tablero principal.
+- Registro e inicio de sesión.
+- Detalle de publicación.
+- Crear o editar publicación.
+- Perfil de usuario.
+- Panel de superadministración.
+
+## Flujo de trabajo con Git
+
+- `main`: versión estable.
+- `develop`: rama de integración.
+- `feature/*`: ramas de funcionalidades y correcciones.
+- Los cambios se integran mediante Pull Requests.
+- Los commits usan convenciones como `feat:`, `fix:`, `docs:`, `refactor:` y `style:`.
+
+## Nota sobre el API
+
+El API es un proyecto separado que debe iniciarse antes de probar las funciones que necesitan datos reales. Ningún archivo del backend, Docker, Prisma, base de datos o configuración sensible debe agregarse a este repositorio del frontend.
