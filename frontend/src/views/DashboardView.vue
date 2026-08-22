@@ -749,6 +749,11 @@ onUnmounted(() => {
   margin-top: 1rem;
 }
 
+.views-grid {
+  display: grid;
+  gap: 1.25rem;
+}
+
 .description {
   color: #cbd5e1;
   margin-bottom: 1rem;
