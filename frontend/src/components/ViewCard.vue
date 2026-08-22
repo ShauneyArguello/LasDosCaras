@@ -38,30 +38,13 @@
       </span>
     </div>
 
-    <div class="sides">
-      <section class="side side-a">
-        <h3>Lado A</h3>
+    <p class="excerpt">
+      {{ excerpt }}
+    </p>
 
-        <p>
-          {{ sideA?.description || 'Sin descripción disponible.' }}
-        </p>
-
-        <span class="side-likes">
-          👍 {{ sideA?.likeCount ?? 0 }}
-        </span>
-      </section>
-
-      <section class="side side-b">
-        <h3>Lado B</h3>
-
-        <p>
-          {{ sideB?.description || 'Sin descripción disponible.' }}
-        </p>
-
-        <span class="side-likes">
-          👍 {{ sideB?.likeCount ?? 0 }}
-        </span>
-      </section>
+    <div class="reaction-summary" aria-label="Reacciones por perspectiva">
+      <span><strong>Lado A</strong> 👍 {{ sideA?.likeCount ?? 0 }} · 👎 {{ sideA?.dislikeCount ?? 0 }}</span>
+      <span><strong>Lado B</strong> 👍 {{ sideB?.likeCount ?? 0 }} · 👎 {{ sideB?.dislikeCount ?? 0 }}</span>
     </div>
 
     <div class="card-actions">
@@ -195,6 +178,16 @@ const formattedDate =
     ).toLocaleDateString()
 
   })
+
+const excerpt = computed(() => {
+  const description = sideA.value?.description?.trim()
+
+  if (!description) return 'Sin descripción disponible.'
+
+  return description.length > 180
+    ? `${description.slice(0, 180).trim()}…`
+    : description
+})
 
 
 function getStoredFavorites():
@@ -503,43 +496,25 @@ onMounted(() => {
 }
 
 
-.sides {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 1rem;
-  min-width: 0;
-}
-
-
-.side {
-  min-width: 0;
-  padding: 1rem;
-  border-radius: 12px;
-  background: #17233a;
-  overflow: hidden;
-}
-
-
-.side h3 {
-  margin-top: 0;
-  color: #f8fafc;
-  overflow-wrap: anywhere;
-}
-
-
-.side p {
+.excerpt {
+  margin: 0;
   color: #cbd5e1;
   overflow-wrap: anywhere;
   word-break: break-word;
   line-height: 1.55;
 }
 
+.reaction-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
 
-.side-likes {
-  display: inline-block;
-  margin-top: 0.75rem;
-  color: #e2e8f0;
-  font-weight: 700;
+.reaction-summary span {
+  padding: 0.55rem 0.75rem;
+  border-radius: 10px;
+  color: #cbd5e1;
+  background: #17233a;
 }
 
 
@@ -602,10 +577,6 @@ onMounted(() => {
 
 
 @media (max-width: 600px) {
-
-  .sides {
-    grid-template-columns: 1fr;
-  }
 
   .view-header {
     align-items: flex-start;
