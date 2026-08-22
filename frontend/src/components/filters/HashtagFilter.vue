@@ -33,7 +33,7 @@ import { ref, watch } from 'vue'
 import type { Hashtag } from '../../models/hashtag'
 import { useDebounce } from '../../composables/useDebounce'
 
-defineProps<{
+const props = defineProps<{
   hashtags: Hashtag[]
   selectedHashtag?: string
 }>()
@@ -57,7 +57,12 @@ watch(debouncedSearch, (value) => {
 function selectHashtag(
   hashtag: string
 ) {
-  emit('change', hashtag)
+  emit(
+    'change',
+    hashtag === props.selectedHashtag
+      ? ''
+      : hashtag
+  )
 }
 </script>
 
