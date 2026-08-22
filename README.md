@@ -167,17 +167,6 @@ frontend/
 └── vite.config.ts
 ```
 
-## Capturas de pantalla
-
-Antes de la entrega final se deben agregar aquí capturas actualizadas de:
-
-- Tablero principal.
-- Registro e inicio de sesión.
-- Detalle de publicación.
-- Crear o editar publicación.
-- Perfil de usuario.
-- Panel de superadministración.
-
 ## Flujo de trabajo con Git
 
 - `main`: versión estable.
@@ -185,7 +174,3 @@ Antes de la entrega final se deben agregar aquí capturas actualizadas de:
 - `feature/*`: ramas de funcionalidades y correcciones.
 - Los cambios se integran mediante Pull Requests.
 - Los commits usan convenciones como `feat:`, `fix:`, `docs:`, `refactor:` y `style:`.
-
-## Nota sobre el API
-
-El API es un proyecto separado que debe iniciarse antes de probar las funciones que necesitan datos reales. Ningún archivo del backend, Docker, Prisma, base de datos o configuración sensible debe agregarse a este repositorio del frontend.
