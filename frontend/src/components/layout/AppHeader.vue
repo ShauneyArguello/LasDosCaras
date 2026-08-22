@@ -58,14 +58,22 @@
         <RouterLink to="/profile" class="profile-link">
           {{ authStore.user?.nombre ?? authStore.user?.name ?? 'Perfil' }}
         </RouterLink>
+        <details v-if="authStore.isSuperadmin" class="admin-menu">
+          <summary>Administración</summary>
+          <nav aria-label="Administración">
+            <RouterLink to="/admin/users">Usuarios</RouterLink>
+            <RouterLink to="/admin/categories">Categorías</RouterLink>
+            <RouterLink to="/admin/moderation">Moderación</RouterLink>
+          </nav>
+        </details>
         <button class="logout-button" type="button" @click="authStore.logout">
-          Salir
+          Cerrar sesión
         </button>
       </template>
 
       <template v-else>
-        <RouterLink to="/login" class="login-link">Login</RouterLink>
-        <RouterLink to="/register" class="register-link">Registro</RouterLink>
+        <RouterLink to="/login" class="login-link">Iniciar sesión</RouterLink>
+        <RouterLink to="/register" class="register-link">Registrarse</RouterLink>
       </template>
     </div>
   </header>
@@ -282,6 +290,60 @@ onMounted(loadCategories)
   color: #ffffff;
 }
 
+.admin-menu {
+  position: relative;
+}
+
+.admin-menu summary {
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  list-style: none;
+}
+
+.admin-menu summary::-webkit-details-marker {
+  display: none;
+}
+
+.admin-menu[open] summary,
+.admin-menu summary:hover {
+  color: var(--text-primary);
+  background: var(--surface-muted);
+}
+
+.admin-menu nav {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 20;
+  min-width: 180px;
+  display: grid;
+  gap: 4px;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.admin-menu nav a {
+  padding: 10px 12px;
+  border-radius: 8px;
+  color: var(--text-secondary);
+  text-decoration: none;
+}
+
+.admin-menu nav a:hover,
+.admin-menu nav a.router-link-active {
+  color: var(--text-primary);
+  background: var(--surface-muted);
+}
+
 .theme-button {
   width: 38px;
   padding: 0;
@@ -415,6 +477,11 @@ onMounted(loadCategories)
   .category-nav,
   .category-nav select {
     width: 100%;
+  }
+
+  .admin-menu nav {
+    right: auto;
+    left: 0;
   }
 }
 </style>

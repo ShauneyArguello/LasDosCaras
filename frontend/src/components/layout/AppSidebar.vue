@@ -1,13 +1,6 @@
 <template>
-  <aside class="app-sidebar">
+  <aside v-if="showSidebar" class="app-sidebar">
     <nav class="sidebar-nav" aria-label="Navegacion principal">
-
-      <RouterLink
-        to="/"
-        class="nav-item"
-      >
-        Inicio
-      </RouterLink>
 
       <RouterLink
         to="/board"
@@ -52,9 +45,18 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
+import { useRoute } from 'vue-router'
 import { useAuthStore } from '../../stores/auth'
 
 const authStore = useAuthStore()
+const route = useRoute()
+
+const showSidebar = computed(() => {
+  if (!authStore.isAuthenticated) return false
+
+  return route.path === '/profile' || route.path.startsWith('/admin')
+})
 </script>
 
 <style scoped>

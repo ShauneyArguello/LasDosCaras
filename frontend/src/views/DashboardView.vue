@@ -1,18 +1,29 @@
 <template>
   <section class="dashboard">
-    <p class="eyebrow">TABLERO</p>
+    <header class="dashboard-hero">
+      <div>
+        <p class="eyebrow">LAS DOS PERSPECTIVAS</p>
+        <h1>Explora, compara y forma tu propia opinión</h1>
+        <p class="description">
+          Conoce diferentes puntos de vista sobre cada tema y participa en la conversación.
+        </p>
+      </div>
 
-    <h1>Publicaciones</h1>
-
-    <p class="description">
-      Explora diferentes perspectivas y utiliza los filtros para encontrar
-      publicaciones.
-    </p>
+      <div class="hero-actions">
+        <RouterLink v-if="!authStore.isAuthenticated" to="/login" class="secondary-action">
+          Iniciar sesión
+        </RouterLink>
+        <RouterLink v-if="!authStore.isAuthenticated" to="/register" class="primary-action">
+          Registrarse
+        </RouterLink>
+        <RouterLink v-else to="/views/new" class="primary-action">
+          Nueva publicación
+        </RouterLink>
+      </div>
+    </header>
 
     <!-- Filtros -->
     <section class="filters">
-      <SearchInput @search="handleSearch" />
-
       <CategoryFilter
         :categories="categories"
         @change="handleCategoryChange"
@@ -130,7 +141,6 @@ import {
   useRouter,
 } from 'vue-router'
 
-import SearchInput from '../components/filters/SearchInput.vue'
 import CategoryFilter from '../components/filters/CategoryFilter.vue'
 import HashtagFilter from '../components/filters/HashtagFilter.vue'
 import SortSelect from '../components/filters/SortSelect.vue'
@@ -138,7 +148,6 @@ import ViewCard from '../components/ViewCard.vue'
 
 import {
   getViews,
-  searchViews,
 } from '../services/viewService'
 
 import {
@@ -160,6 +169,7 @@ import type {
 import type {
   Hashtag,
 } from '../models/hashtag'
+import { useAuthStore } from '../stores/auth'
 import {
   CACHE_KEYS,
   CACHE_TTL,
@@ -181,6 +191,7 @@ interface DashboardFilters {
 const route = useRoute()
 
 const router = useRouter()
+const authStore = useAuthStore()
 
 
 // =====================================
@@ -260,13 +271,6 @@ const currentPage = ref(
   Number(route.query.page) || cachedFilters?.page || 1
 )
 
-const search = ref(
-  typeof route.query.q === 'string'
-    ? route.query.q
-    : ''
-)
-
-
 // =====================================
 // PAGINACIÓN
 // =====================================
@@ -328,9 +332,6 @@ function updateQueryParams() {
             )
           : undefined,
 
-      q:
-        search.value ||
-        undefined,
     },
   })
 }
@@ -537,62 +538,6 @@ async function loadHashtags(
 
 
 // =====================================
-// BÚSQUEDA
-// =====================================
-
-async function handleSearch(
-  query: string
-) {
-  search.value =
-    query.trim()
-
-  currentPage.value = 1
-
-  updateQueryParams()
-
-  if (
-    !search.value
-  ) {
-    await loadViews()
-    return
-  }
-
-  loading.value = true
-
-  error.value = ''
-
-  try {
-    const result =
-      await searchViews(
-        search.value
-      )
-
-    views.value =
-      sortViews(
-        result?.views ?? []
-      )
-
-    totalViews.value =
-      views.value.length
-  } catch (err) {
-    console.error(
-      'Error buscando publicaciones:',
-      err
-    )
-
-    error.value =
-      'No se pudieron buscar las publicaciones.'
-
-    views.value = []
-
-    totalViews.value = 0
-  } finally {
-    loading.value = false
-  }
-}
-
-
-// =====================================
 // CAMBIO DE CATEGORÍA
 // =====================================
 
@@ -721,15 +666,7 @@ onMounted(async () => {
     loadHashtags(),
   ])
 
-  if (
-    search.value
-  ) {
-    await handleSearch(
-      search.value
-    )
-  } else {
-    await loadViews()
-  }
+  await loadViews()
 })
 
 onUnmounted(() => {
@@ -742,6 +679,58 @@ onUnmounted(() => {
 
 <style scoped>
 
+.dashboard {
+  max-width: 1440px;
+  margin: 0 auto;
+}
+
+.dashboard-hero {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 2rem;
+  padding: 1.75rem;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: linear-gradient(135deg, var(--surface), var(--surface-muted));
+}
+
+.dashboard-hero h1 {
+  max-width: 760px;
+  margin: 0.35rem 0 0.75rem;
+  font-size: clamp(2rem, 4vw, 3.25rem);
+  line-height: 1.08;
+}
+
+.hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.primary-action,
+.secondary-action {
+  min-height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 1rem;
+  border-radius: 10px;
+  text-decoration: none;
+  font-weight: 700;
+}
+
+.primary-action {
+  color: #fff;
+  background: var(--accent);
+}
+
+.secondary-action {
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+
 .filters {
   display: grid;
   grid-template-columns: repeat(
@@ -749,11 +738,11 @@ onUnmounted(() => {
     minmax(220px, 1fr)
   );
   gap: 1rem;
-  margin: 1.5rem 0 2rem;
+  margin: 1rem 0 2rem;
   padding: 1.25rem;
   border: 1px solid #26344d;
   border-radius: 14px;
-  background: #121c2f;
+  background: var(--surface);
 }
 
 .results {
@@ -853,6 +842,18 @@ onUnmounted(() => {
 }
 
 @media (max-width: 600px) {
+  .dashboard-hero {
+    align-items: stretch;
+    flex-direction: column;
+    padding: 1.25rem;
+  }
+
+  .hero-actions,
+  .primary-action,
+  .secondary-action {
+    width: 100%;
+  }
+
   .skeleton-sides {
     grid-template-columns: 1fr;
   }
