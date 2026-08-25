@@ -1002,6 +1002,22 @@ onMounted(loadInitialData)
   color: #dc2626;
 }
 
+.field-group .field-error {
+  color: #dc2626;
+  font-weight: 600;
+}
+
+:deep(.field-error) {
+  color: #dc2626;
+  font-weight: 600;
+}
+
+.field-group textarea[aria-invalid='true'],
+.field-group input[aria-invalid='true'],
+.field-group select[aria-invalid='true'] {
+  border-color: #dc2626;
+}
+
 .source-editor {
   display: flex;
   flex-direction: column;
