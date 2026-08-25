@@ -31,6 +31,16 @@ export const useNotificationStore = defineStore('notifications', {
       type: NotificationType = 'info',
       duration = DEFAULT_DURATIONS[type]
     ) {
+      const duplicateExists = this.notifications.some(
+        (notification) =>
+          notification.message === message &&
+          notification.type === type
+      )
+
+      if (duplicateExists) {
+        return
+      }
+
       const notification: AppNotification = {
         id: this.nextId,
         message,
