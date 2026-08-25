@@ -1,5 +1,4 @@
 import api from './api'
-import axios from 'axios'
 import type { Category } from '../models/category'
 
 
@@ -97,35 +96,6 @@ function normalizeCategoryResponse(
 }
 
 
-function shouldRetryWithEnglishPayload(
-  error: unknown
-): boolean {
-
-  return (
-    axios.isAxiosError(error) &&
-    (
-      error.response?.status === 400 ||
-      error.response?.status === 422
-    )
-  )
-
-}
-
-
-function buildSpanishPayload(
-  name: string,
-  description: string,
-  extra: CategoryPayload = {}
-): CategoryPayload {
-
-  return {
-    nombre: name,
-    descripcion: description,
-    ...extra,
-  }
-}
-
-
 function buildEnglishPayload(
   name: string,
   description: string,
@@ -147,44 +117,12 @@ async function mutateCategory(
   description: string,
   extra: CategoryPayload = {}
 ): Promise<Category> {
+  const response = await api[method](
+    url,
+    buildEnglishPayload(name, description, extra)
+  )
 
-  try {
-
-    const response =
-      await api[method](
-        url,
-        buildSpanishPayload(
-          name,
-          description,
-          extra
-        )
-      )
-
-    return normalizeCategoryResponse(
-      response.data
-    )
-
-  } catch (error) {
-
-    if (!shouldRetryWithEnglishPayload(error)) {
-      throw error
-    }
-
-    const response =
-      await api[method](
-        url,
-        buildEnglishPayload(
-          name,
-          description,
-          extra
-        )
-      )
-
-    return normalizeCategoryResponse(
-      response.data
-    )
-
-  }
+  return normalizeCategoryResponse(response.data)
 
 }
 

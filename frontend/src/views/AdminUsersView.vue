@@ -111,13 +111,13 @@
               <span
                 class="status-badge"
                 :class="
-                  user.status === 'banned'
+                  isBanned(user)
                     ? 'banned'
                     : 'active'
                 "
               >
                 {{
-                  user.status === 'banned'
+                  isBanned(user)
                     ? 'Baneado'
                     : 'Activo'
                 }}
@@ -130,7 +130,7 @@
 
             <td>
               <button
-                v-if="user.status !== 'banned'"
+                v-if="!isBanned(user)"
                 type="button"
                 class="ban-button"
                 :disabled="
@@ -298,6 +298,13 @@ function formatDate(
 }
 
 
+function isBanned(
+  user: AdminUser
+): boolean {
+  return user.status?.toUpperCase() === 'BANNED'
+}
+
+
 function showMessage(
   text: string,
   type: 'success' | 'error'
@@ -329,7 +336,8 @@ async function loadUsers() {
     const result =
       await getAdminUsers(
         currentPage.value,
-        search.value
+        search.value,
+        pageSize
       )
 
     users.value =
@@ -398,16 +406,18 @@ async function confirmBan(
 
   try {
 
-    await banUser(
+    const updatedUser = await banUser(
       user.id
+    )
+
+    users.value = users.value.map(item =>
+      item.id === updatedUser.id ? updatedUser : item
     )
 
     showMessage(
       'Usuario baneado correctamente.',
       'success'
     )
-
-    await loadUsers()
 
   } catch (err) {
 
@@ -449,16 +459,18 @@ async function confirmUnban(
 
   try {
 
-    await unbanUser(
+    const updatedUser = await unbanUser(
       user.id
+    )
+
+    users.value = users.value.map(item =>
+      item.id === updatedUser.id ? updatedUser : item
     )
 
     showMessage(
       'Usuario desbaneado correctamente.',
       'success'
     )
-
-    await loadUsers()
 
   } catch (err) {
 
@@ -603,7 +615,8 @@ td {
 
 
 th {
-  background: #f8fafc;
+  background: var(--surface-muted);
+  color: var(--text-primary);
 }
 
 
