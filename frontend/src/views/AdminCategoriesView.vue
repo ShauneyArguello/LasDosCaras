@@ -943,7 +943,8 @@ td {
 }
 
 th {
-  background: #f8fafc;
+  background: var(--surface-muted);
+  color: var(--text-primary);
 }
 
 .actions {

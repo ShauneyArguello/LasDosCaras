@@ -8,7 +8,8 @@ import type {
 
 export async function getAdminUsers(
   page = 1,
-  search = ''
+  search = '',
+  limit = 10
 ): Promise<UserListResponse> {
 
   const response =
@@ -17,7 +18,8 @@ export async function getAdminUsers(
       {
         params: {
           page,
-          search,
+          search: search.trim() || undefined,
+          limit,
         },
       }
     )
@@ -31,11 +33,11 @@ export async function banUser(
 ): Promise<AdminUser> {
 
   const response =
-    await api.patch<AdminUser>(
+    await api.patch<{ user: AdminUser }>(
       `/api/admin/users/${userId}/ban`
     )
 
-  return response.data
+  return response.data.user
 }
 
 
@@ -44,9 +46,9 @@ export async function unbanUser(
 ): Promise<AdminUser> {
 
   const response =
-    await api.patch<AdminUser>(
+    await api.patch<{ user: AdminUser }>(
       `/api/admin/users/${userId}/unban`
     )
 
-  return response.data
+  return response.data.user
 }
