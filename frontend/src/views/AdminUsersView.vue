@@ -301,7 +301,7 @@ function formatDate(
 function isBanned(
   user: AdminUser
 ): boolean {
-  return user.status?.toUpperCase() === 'BANNED'
+  return user.status?.toUpperCase() === 'SUSPENDED'
 }
 
 
