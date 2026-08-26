@@ -8,6 +8,8 @@ export type AuthUser = {
   role?: string
   rol?: string
   status?: string
+  createdAt?: string
+  fechaRegistro?: string
 }
 
 type RegisterPayload = {

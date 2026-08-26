@@ -11,6 +11,8 @@ export type AuthUser = {
   email?: string
   rol?: string
   role?: string
+  createdAt?: string
+  fechaRegistro?: string
 }
 
 type StoredAuth = {
