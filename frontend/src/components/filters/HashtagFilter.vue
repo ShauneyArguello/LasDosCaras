@@ -76,7 +76,7 @@ function selectHashtag(
 
 .hashtag-filter label {
   font-weight: 600;
-  color: #e5e7eb;
+  color: var(--text-primary);
 }
 
 .hashtag-filter input {

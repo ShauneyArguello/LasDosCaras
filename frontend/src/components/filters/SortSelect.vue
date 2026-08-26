@@ -50,7 +50,7 @@ watch(selectedSort, (value) => {
 
 .sort-select label {
   font-weight: 600;
-  color: #e5e7eb;
+  color: var(--text-primary);
 }
 
 .sort-select select {
