@@ -714,6 +714,8 @@ onUnmounted(() => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  text-align: center;
+  line-height: 1.2;
   padding: 0 1rem;
   border-radius: 10px;
   text-decoration: none;
