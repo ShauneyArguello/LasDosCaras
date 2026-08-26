@@ -755,7 +755,7 @@ onUnmounted(() => {
 }
 
 .description {
-  color: #cbd5e1;
+  color: var(--text-secondary);
   margin-bottom: 1rem;
 }
 

@@ -48,7 +48,7 @@ watch(selectedCategory, (value) => {
 
 .category-filter label {
   font-weight: 600;
-  color: #e5e7eb;
+  color: var(--text-primary);
 }
 
 .category-filter select {
