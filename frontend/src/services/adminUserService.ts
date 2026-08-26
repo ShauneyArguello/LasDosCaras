@@ -11,6 +11,7 @@ export async function getAdminUsers(
   search = '',
   limit = 10
 ): Promise<UserListResponse> {
+  const trimmedSearch = search.trim()
 
   const response =
     await api.get<UserListResponse>(
@@ -18,8 +19,10 @@ export async function getAdminUsers(
       {
         params: {
           page,
-          search: search.trim() || undefined,
           limit,
+          search:
+            trimmedSearch ||
+            undefined,
         },
       }
     )
