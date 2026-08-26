@@ -84,6 +84,16 @@
             </p>
           </div>
 
+          <div>
+            <span class="label">
+              Fecha de registro
+            </span>
+
+            <p>
+              {{ userRegistrationDate }}
+            </p>
+          </div>
+
         </div>
 
         <button
@@ -464,6 +474,15 @@ const userRole =
     }
 
     return 'Usuario'
+  })
+
+
+const userRegistrationDate =
+  computed(() => {
+    return formatDate(
+      currentUser.value?.createdAt ??
+      currentUser.value?.fechaRegistro
+    )
   })
 
 
