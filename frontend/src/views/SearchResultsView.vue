@@ -47,47 +47,34 @@
       Ingresa un término de búsqueda.
     </p>
 
-    <p
+    <div
       v-else-if="loading"
       class="loading-message"
+      role="status"
+      aria-live="polite"
     >
-      Buscando publicaciones...
-    </p>
+      <span class="spinner" aria-hidden="true"></span>
+      <span>Buscando publicaciones...</span>
+    </div>
 
     <div
       v-else-if="error"
       class="error-message"
       role="alert"
     >
-      <p>
-        {{ error }}
-      </p>
-
-      <button
-        type="button"
-        @click="loadResults"
-      >
-        Reintentar
-      </button>
+      <p>{{ error }}</p>
+      <button type="button" @click="loadResults">Reintentar</button>
     </div>
 
     <div
       v-else-if="results.length === 0"
       class="empty-message"
     >
-      <h2>
-        No se encontraron publicaciones para "{{ query }}"
-      </h2>
-
-      <p>
-        Intenta usar un término más general.
-      </p>
+      <h2>No se encontraron publicaciones para "{{ query }}"</h2>
+      <p>Intenta usar un término más general.</p>
     </div>
 
-    <div
-      v-else
-      class="results-list"
-    >
+    <div v-else class="results-list">
       <article
         v-for="view in results"
         :key="view.id"
@@ -101,17 +88,12 @@
             {{ view.category.name }}
           </RouterLink>
 
-          <span class="date">
-            {{ formatDate(view.createdAt) }}
-          </span>
+          <span class="date">{{ formatDate(view.createdAt) }}</span>
         </div>
 
         <h2
           class="result-title"
-          v-html="highlightText(
-            getTitle(view),
-            query
-          )"
+          v-html="highlightText(getTitle(view), query)"
         ></h2>
 
         <RouterLink
@@ -123,16 +105,10 @@
 
         <p
           class="result-description"
-          v-html="highlightText(
-            getDescription(view),
-            query
-          )"
+          v-html="highlightText(getDescription(view), query)"
         ></p>
 
-        <div
-          v-if="view.hashtags?.length"
-          class="hashtags"
-        >
+        <div v-if="view.hashtags?.length" class="hashtags">
           <span
             v-for="hashtag in view.hashtags"
             :key="hashtag.id"
@@ -449,6 +425,28 @@ watch(
   cursor: pointer;
 }
 
+.loading-message {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.spinner {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .results-list {
   display: grid;
   grid-template-columns:
@@ -577,4 +575,3 @@ watch(
 }
 
 </style>
-s
