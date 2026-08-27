@@ -81,6 +81,19 @@
           </p>
         </div>
 
+        <div class="form-group">
+          <label for="description">
+            Descripción
+          </label>
+
+          <textarea
+            id="description"
+            v-model="description"
+            rows="3"
+            placeholder="Descripción de la categoría"
+          ></textarea>
+        </div>
+
       </div>
 
       <div class="form-actions">
@@ -151,6 +164,7 @@
         <thead>
           <tr>
             <th>Nombre</th>
+            <th>Descripción</th>
             <th>Publicaciones</th>
             <th>Estado</th>
             <th>Acciones</th>
@@ -164,6 +178,13 @@
           >
             <td>
               {{ getCategoryName(category) }}
+            </td>
+
+            <td class="category-description">
+              {{
+                getCategoryDescription(category) ||
+                'Sin descripción'
+              }}
             </td>
 
             <td>
@@ -296,6 +317,17 @@ import {
   getViews,
 } from '../services/viewService'
 
+import {
+  CacheService,
+} from '../services/cacheService'
+
+
+type CategoryDescriptionMap =
+  Record<string, string>
+
+const CATEGORY_DESCRIPTIONS_KEY =
+  'lasdoscaras_admin_category_descriptions'
+
 
 const categories =
   ref<Category[]>([])
@@ -318,6 +350,9 @@ const isFormOpen =
   ref(false)
 
 const name =
+  ref('')
+
+const description =
   ref('')
 
 const nameError =
@@ -363,6 +398,86 @@ function getCategoryName(
     category.nombre ??
     ''
   )
+
+}
+
+
+function getCategoryDescription(
+  category: Category
+): string {
+
+  const savedDescriptions =
+    getStoredCategoryDescriptions()
+
+  return (
+    category.description ??
+    category.descripcion ??
+    savedDescriptions[category.id] ??
+    ''
+  )
+
+}
+
+
+function getStoredCategoryDescriptions():
+  CategoryDescriptionMap {
+
+  return (
+    CacheService.getStale<CategoryDescriptionMap>(
+      CATEGORY_DESCRIPTIONS_KEY
+    ) ?? {}
+  )
+
+}
+
+
+function saveCategoryDescription(
+  categoryId: string,
+  value: string
+) {
+
+  const descriptions =
+    getStoredCategoryDescriptions()
+
+  if (value) {
+    descriptions[categoryId] =
+      value
+  } else {
+    delete descriptions[categoryId]
+  }
+
+  CacheService.set(
+    CATEGORY_DESCRIPTIONS_KEY,
+    descriptions
+  )
+
+}
+
+
+function removeCategoryDescription(
+  categoryId: string
+) {
+
+  saveCategoryDescription(
+    categoryId,
+    ''
+  )
+
+}
+
+
+function withStoredDescription(
+  category: Category
+): Category {
+
+  const description =
+    getCategoryDescription(category)
+
+  return {
+    ...category,
+    description,
+    descripcion: category.descripcion ?? description,
+  }
 
 }
 
@@ -418,7 +533,10 @@ async function loadCategories() {
     const categoriesWithCount =
       await Promise.all(
         categoryList.map(
-          async (category) => {
+          async (rawCategory) => {
+
+            const category =
+              withStoredDescription(rawCategory)
 
             try {
 
@@ -533,6 +651,9 @@ async function saveCategory() {
   const cleanName =
     name.value.trim()
 
+  const cleanDescription =
+    description.value.trim()
+
   saving.value =
     true
 
@@ -540,10 +661,16 @@ async function saveCategory() {
 
     if (editingCategoryId.value) {
 
-      await updateCategory(
+      const savedCategory =
+        await updateCategory(
         editingCategoryId.value,
         cleanName,
-        ''
+        cleanDescription
+      )
+
+      saveCategoryDescription(
+        savedCategory.id ?? editingCategoryId.value,
+        cleanDescription
       )
 
       showMessage(
@@ -553,9 +680,15 @@ async function saveCategory() {
 
     } else {
 
-      await createCategory(
+      const savedCategory =
+        await createCategory(
         cleanName,
-        ''
+        cleanDescription
+      )
+
+      saveCategoryDescription(
+        savedCategory.id,
+        cleanDescription
       )
 
       showMessage(
@@ -628,6 +761,9 @@ function startEdit(
   name.value =
     getCategoryName(category)
 
+  description.value =
+    getCategoryDescription(category)
+
   nameError.value =
     ''
 
@@ -650,6 +786,9 @@ function clearForm() {
     null
 
   name.value =
+    ''
+
+  description.value =
     ''
 
   nameError.value =
@@ -704,6 +843,10 @@ async function deleteSelectedCategory() {
     showMessage(
       'Categoría eliminada correctamente.',
       'success'
+    )
+
+    removeCategoryDescription(
+      category.id
     )
 
     categoryToDelete.value =
@@ -829,6 +972,14 @@ onMounted(() => {
   border-radius: 8px;
 }
 
+.form-group textarea {
+  min-height: 90px;
+  padding: 10px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  resize: vertical;
+}
+
 .form-group input[aria-invalid='true'] {
   border-color: #dc2626;
 }
@@ -923,6 +1074,13 @@ th {
 .actions {
   align-items: center;
   flex-wrap: wrap;
+}
+
+.category-description {
+  max-width: 420px;
+  color: var(--text-secondary);
+  line-height: 1.45;
+  overflow-wrap: anywhere;
 }
 
 .status-badge {
