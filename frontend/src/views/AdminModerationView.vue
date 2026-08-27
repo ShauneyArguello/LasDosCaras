@@ -205,6 +205,56 @@
       </button>
     </div>
 
+    <div
+      v-if="pendingModeration"
+      class="modal-backdrop"
+      role="presentation"
+      @click.self="closeModerationDialog"
+    >
+      <section
+        class="confirm-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="moderation-dialog-title"
+      >
+        <p class="dialog-eyebrow">
+          Moderación
+        </p>
+
+        <h2 id="moderation-dialog-title">
+          {{ moderationDialogTitle }}
+        </h2>
+
+        <p>
+          {{ moderationDialogMessage }}
+        </p>
+
+        <div class="dialog-actions">
+          <button
+            type="button"
+            class="cancel-button"
+            :disabled="Boolean(changingId)"
+            @click="closeModerationDialog"
+          >
+            Cancelar
+          </button>
+
+          <button
+            type="button"
+            :class="moderationDialogActionClass"
+            :disabled="Boolean(changingId)"
+            @click="applyModerationAction"
+          >
+            {{
+              changingId
+                ? 'Procesando...'
+                : moderationDialogActionLabel
+            }}
+          </button>
+        </div>
+      </section>
+    </div>
+
   </section>
 </template>
 
@@ -256,6 +306,16 @@ const total =
 const changingId =
   ref('')
 
+type ModerationAction =
+  'publish' |
+  'unpublish'
+
+const pendingModeration =
+  ref<{
+    view: AdminView
+    action: ModerationAction
+  } | null>(null)
+
 
 const totalPages =
   computed(() => {
@@ -263,6 +323,49 @@ const totalPages =
       1,
       Math.ceil(total.value / limit.value)
     )
+  })
+
+const moderationDialogTitle =
+  computed(() => {
+    if (!pendingModeration.value) {
+      return ''
+    }
+
+    return pendingModeration.value.action === 'publish'
+      ? 'Republicar publicación'
+      : 'Despublicar publicación'
+  })
+
+const moderationDialogMessage =
+  computed(() => {
+    if (!pendingModeration.value) {
+      return ''
+    }
+
+    const title =
+      getViewTitle(pendingModeration.value.view)
+
+    return pendingModeration.value.action === 'publish'
+      ? `La publicación "${title}" volverá a estar visible en el tablero.`
+      : `La publicación "${title}" dejará de mostrarse en el tablero.`
+  })
+
+const moderationDialogActionLabel =
+  computed(() => {
+    if (!pendingModeration.value) {
+      return ''
+    }
+
+    return pendingModeration.value.action === 'publish'
+      ? 'Republicar'
+      : 'Despublicar'
+  })
+
+const moderationDialogActionClass =
+  computed(() => {
+    return pendingModeration.value?.action === 'publish'
+      ? 'publish-button'
+      : 'unpublish-button'
   })
 
 
@@ -340,96 +443,98 @@ function formatDate(
 }
 
 
-async function confirmUnpublish(
+function confirmUnpublish(
   view: AdminView
 ) {
 
-  const confirmed =
-    window.confirm(
-      `¿Deseas despublicar "${getViewTitle(view)}"?`
-    )
-
-  if (!confirmed) {
-    return
+  pendingModeration.value = {
+    view,
+    action: 'unpublish',
   }
 
-  changingId.value =
-    view.id
-
-  try {
-
-    await unpublishView(
-      view.id
-    )
-
-    view.status =
-      'UNPUBLISHED'
-
-    showMessage(
-      'Publicación despublicada correctamente.',
-      'success'
-    )
-
-  } catch (err) {
-
-    console.error(
-      'Error despublicando publicación:',
-      err
-    )
-
-    showMessage(
-      'No se pudo despublicar la publicación.',
-      'error'
-    )
-
-  } finally {
-
-    changingId.value =
-      ''
-
-  }
 }
 
 
-async function confirmPublish(
+function confirmPublish(
   view: AdminView
 ) {
 
-  const confirmed =
-    window.confirm(
-      `¿Deseas republicar "${getViewTitle(view)}"?`
-    )
+  pendingModeration.value = {
+    view,
+    action: 'publish',
+  }
 
-  if (!confirmed) {
+}
+
+
+function closeModerationDialog() {
+
+  if (changingId.value) {
     return
   }
+
+  pendingModeration.value =
+    null
+
+}
+
+
+async function applyModerationAction() {
+
+  if (!pendingModeration.value) {
+    return
+  }
+
+  const {
+    view,
+    action,
+  } = pendingModeration.value
 
   changingId.value =
     view.id
 
   try {
 
-    await publishView(
-      view.id
-    )
+    if (action === 'publish') {
+      await publishView(
+        view.id
+      )
 
-    view.status =
-      'PUBLISHED'
+      view.status =
+        'PUBLISHED'
 
-    showMessage(
-      'Publicación republicada correctamente.',
-      'success'
-    )
+      showMessage(
+        'Publicación republicada correctamente.',
+        'success'
+      )
+    } else {
+      await unpublishView(
+        view.id
+      )
+
+      view.status =
+        'UNPUBLISHED'
+
+      showMessage(
+        'Publicación despublicada correctamente.',
+        'success'
+      )
+    }
+
+    pendingModeration.value =
+      null
 
   } catch (err) {
 
     console.error(
-      'Error republicando publicación:',
+      'Error actualizando publicación:',
       err
     )
 
     showMessage(
-      'No se pudo republicar la publicación.',
+      action === 'publish'
+        ? 'No se pudo republicar la publicación.'
+        : 'No se pudo despublicar la publicación.',
       'error'
     )
 
@@ -611,6 +716,15 @@ th {
   background: #16a34a;
 }
 
+.cancel-button {
+  padding: 8px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: white;
+  color: #334155;
+  cursor: pointer;
+}
+
 button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
@@ -654,6 +768,50 @@ button:disabled {
   cursor: pointer;
 }
 
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgb(15 23 42 / 0.55);
+}
+
+.confirm-dialog {
+  width: min(100%, 460px);
+  padding: 24px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: 0 24px 60px rgb(15 23 42 / 0.24);
+}
+
+.confirm-dialog h2 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 24px;
+}
+
+.confirm-dialog p {
+  color: var(--text-secondary);
+}
+
+.dialog-eyebrow {
+  margin: 0 0 8px;
+  color: var(--accent);
+  font-size: 0.8rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 22px;
+}
+
 @media (max-width: 768px) {
 
   .page-header h1 {
@@ -666,6 +824,11 @@ button:disabled {
   }
 
   .actions {
+    flex-direction: column;
+  }
+
+  .dialog-actions {
+    align-items: stretch;
     flex-direction: column;
   }
 
