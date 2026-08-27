@@ -81,18 +81,6 @@
           </p>
         </div>
 
-        <div class="form-group">
-          <label for="description">
-            Descripción
-          </label>
-
-          <textarea
-            id="description"
-            v-model="description"
-            rows="3"
-            placeholder="Descripción de la categoría"
-          ></textarea>
-        </div>
       </div>
 
       <div class="form-actions">
@@ -163,7 +151,6 @@
         <thead>
           <tr>
             <th>Nombre</th>
-            <th>Descripción</th>
             <th>Publicaciones</th>
             <th>Estado</th>
             <th>Acciones</th>
@@ -177,13 +164,6 @@
           >
             <td>
               {{ getCategoryName(category) }}
-            </td>
-
-            <td>
-              {{
-                getCategoryDescription(category) ||
-                'Sin descripción'
-              }}
             </td>
 
             <td>
@@ -208,33 +188,31 @@
             </td>
 
             <td class="actions">
-              <button
-                type="button"
-                class="edit-button"
-                @click="startEdit(category)"
-              >
-                Editar
-              </button>
+              <template v-if="isCategoryActive(category)">
+                <button
+                  type="button"
+                  class="edit-button"
+                  @click="startEdit(category)"
+                >
+                  Editar
+                </button>
 
-              <button
-                v-if="isCategoryActive(category)"
-                type="button"
-                class="delete-button"
-                :disabled="actionLoadingId === category.id"
-                @click="openDeleteDialog(category)"
-              >
-                Eliminar
-              </button>
+                <button
+                  type="button"
+                  class="delete-button"
+                  :disabled="actionLoadingId === category.id"
+                  @click="openDeleteDialog(category)"
+                >
+                  Eliminar
+                </button>
+              </template>
 
-              <button
+              <span
                 v-else
-                type="button"
-                class="activate-button"
-                :disabled="actionLoadingId === category.id"
-                @click="confirmActivate(category)"
+                class="inactive-note"
               >
-                Activar
-              </button>
+                Sin opción de reactivación disponible
+              </span>
             </td>
           </tr>
         </tbody>
@@ -308,12 +286,15 @@ import type {
 } from '../models/category'
 
 import {
-  activateCategory,
   createCategory,
   deleteCategory,
   getAdminCategories,
   updateCategory,
 } from '../services/adminCategoryService'
+
+import {
+  getViews,
+} from '../services/viewService'
 
 
 const categories =
@@ -337,9 +318,6 @@ const isFormOpen =
   ref(false)
 
 const name =
-  ref('')
-
-const description =
   ref('')
 
 const nameError =
@@ -383,19 +361,6 @@ function getCategoryName(
   return (
     category.name ??
     category.nombre ??
-    ''
-  )
-
-}
-
-
-function getCategoryDescription(
-  category: Category
-): string {
-
-  return (
-    category.description ??
-    category.descripcion ??
     ''
   )
 
@@ -447,8 +412,48 @@ async function loadCategories() {
 
   try {
 
-    categories.value =
+    const categoryList =
       await getAdminCategories()
+
+    const categoriesWithCount =
+      await Promise.all(
+        categoryList.map(
+          async (category) => {
+
+            try {
+
+              const result =
+                await getViews({
+                  category: category.id,
+                  page: 1,
+                  limit: 1,
+                })
+
+              return {
+                ...category,
+                viewsCount: result.total,
+              }
+
+            } catch (err) {
+
+              console.error(
+                `Error contando publicaciones de ${category.id}:`,
+                err
+              )
+
+              return {
+                ...category,
+                viewsCount: 0,
+              }
+
+            }
+
+          }
+        )
+      )
+
+    categories.value =
+      categoriesWithCount
 
   } catch (err) {
 
@@ -528,9 +533,6 @@ async function saveCategory() {
   const cleanName =
     name.value.trim()
 
-  const cleanDescription =
-    description.value.trim()
-
   saving.value =
     true
 
@@ -541,7 +543,7 @@ async function saveCategory() {
       await updateCategory(
         editingCategoryId.value,
         cleanName,
-        cleanDescription
+        ''
       )
 
       showMessage(
@@ -553,7 +555,7 @@ async function saveCategory() {
 
       await createCategory(
         cleanName,
-        cleanDescription
+        ''
       )
 
       showMessage(
@@ -626,9 +628,6 @@ function startEdit(
   name.value =
     getCategoryName(category)
 
-  description.value =
-    getCategoryDescription(category)
-
   nameError.value =
     ''
 
@@ -651,9 +650,6 @@ function clearForm() {
     null
 
   name.value =
-    ''
-
-  description.value =
     ''
 
   nameError.value =
@@ -751,50 +747,6 @@ async function deleteSelectedCategory() {
 }
 
 
-async function confirmActivate(
-  category: Category
-) {
-
-  actionLoadingId.value =
-    category.id
-
-  try {
-
-    await activateCategory(
-      category.id,
-      getCategoryName(category),
-      getCategoryDescription(category)
-    )
-
-    showMessage(
-      'Categoría activada correctamente.',
-      'success'
-    )
-
-    await loadCategories()
-
-  } catch (err) {
-
-    console.error(
-      'Error activando categoría:',
-      err
-    )
-
-    showMessage(
-      'No se pudo activar la categoría.',
-      'error'
-    )
-
-  } finally {
-
-    actionLoadingId.value =
-      ''
-
-  }
-
-}
-
-
 onMounted(() => {
   loadCategories()
 })
@@ -871,8 +823,7 @@ onMounted(() => {
   font-weight: 600;
 }
 
-.form-group input,
-.form-group textarea {
+.form-group input {
   padding: 10px 12px;
   border: 1px solid #cbd5e1;
   border-radius: 8px;
@@ -892,8 +843,7 @@ onMounted(() => {
 .cancel-button,
 .ghost-button,
 .edit-button,
-.delete-button,
-.activate-button {
+.delete-button {
   padding: 9px 14px;
   border: none;
   border-radius: 8px;
@@ -917,11 +867,6 @@ onMounted(() => {
 
 .delete-button {
   background: #dc2626;
-  color: white;
-}
-
-.activate-button {
-  background: #16a34a;
   color: white;
 }
 
@@ -996,6 +941,12 @@ th {
 .status-badge.inactive {
   background: #fee2e2;
   color: #991b1b;
+}
+
+.inactive-note {
+  color: #991b1b;
+  font-size: 0.85rem;
+  font-weight: 600;
 }
 
 .message {
