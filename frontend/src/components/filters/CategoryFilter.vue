@@ -4,7 +4,7 @@
 
     <select
       id="category"
-      v-model="selectedCategory"
+      v-model="localSelectedCategory"
     >
       <option value="">Todas las categorías</option>
 
@@ -20,22 +20,56 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
-import type { Category } from '../../models/category'
+import {
+  ref,
+  watch,
+} from 'vue'
 
-defineProps<{
-  categories: Category[]
-}>()
+import type {
+  Category,
+} from '../../models/category'
+
+const props = withDefaults(
+  defineProps<{
+    categories: Category[]
+    selectedCategory?: string
+  }>(),
+  {
+    selectedCategory: '',
+  }
+)
 
 const emit = defineEmits<{
   change: [categoryId: string]
 }>()
 
-const selectedCategory = ref('')
+const localSelectedCategory =
+  ref(props.selectedCategory)
 
-watch(selectedCategory, (value) => {
-  emit('change', value)
-})
+watch(
+  () => props.selectedCategory,
+  (value) => {
+    if (
+      value !==
+      localSelectedCategory.value
+    ) {
+      localSelectedCategory.value =
+        value
+    }
+  }
+)
+
+watch(
+  localSelectedCategory,
+  (value) => {
+    if (
+      value !==
+      props.selectedCategory
+    ) {
+      emit('change', value)
+    }
+  }
+)
 </script>
 
 <style scoped>

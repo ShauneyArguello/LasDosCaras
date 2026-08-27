@@ -26,6 +26,7 @@
     <section class="filters">
       <CategoryFilter
         :categories="categories"
+        :selected-category="selectedCategory"
         @change="handleCategoryChange"
       />
 
@@ -134,6 +135,7 @@ import {
   onMounted,
   onUnmounted,
   ref,
+  watch,
 } from 'vue'
 
 import {
@@ -169,7 +171,9 @@ import type {
 import type {
   Hashtag,
 } from '../models/hashtag'
+
 import { useAuthStore } from '../stores/auth'
+
 import {
   CACHE_KEYS,
   CACHE_TTL,
@@ -191,6 +195,7 @@ interface DashboardFilters {
 const route = useRoute()
 
 const router = useRouter()
+
 const authStore = useAuthStore()
 
 
@@ -271,6 +276,7 @@ const currentPage = ref(
   Number(route.query.page) || cachedFilters?.page || 1
 )
 
+
 // =====================================
 // PAGINACIÓN
 // =====================================
@@ -301,13 +307,17 @@ const hasNextPage = computed(
 // ACTUALIZAR QUERY PARAMS
 // =====================================
 
-function updateQueryParams() {
+function saveFiltersToCache() {
   CacheService.set(CACHE_KEYS.filters, {
     category: selectedCategory.value,
     hashtag: selectedHashtag.value,
     sort: selectedSort.value,
     page: currentPage.value,
   })
+}
+
+function updateQueryParams() {
+  saveFiltersToCache()
 
   router.replace({
     query: {
@@ -544,6 +554,13 @@ async function loadHashtags(
 async function handleCategoryChange(
   categoryId: string
 ) {
+  if (
+    selectedCategory.value ===
+    categoryId
+  ) {
+    return
+  }
+
   selectedCategory.value =
     categoryId
 
@@ -553,6 +570,37 @@ async function handleCategoryChange(
 
   await loadViews()
 }
+
+
+// =====================================
+// SINCRONIZAR CATEGORÍA DESDE LA URL
+// =====================================
+
+watch(
+  () => route.query.category,
+  async (value) => {
+    const categoryId =
+      typeof value === 'string'
+        ? value
+        : ''
+
+    if (
+      categoryId ===
+      selectedCategory.value
+    ) {
+      return
+    }
+
+    selectedCategory.value =
+      categoryId
+
+    currentPage.value = 1
+
+    saveFiltersToCache()
+
+    await loadViews()
+  }
+)
 
 
 // =====================================
