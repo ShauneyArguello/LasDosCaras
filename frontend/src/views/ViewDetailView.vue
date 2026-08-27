@@ -1,7 +1,11 @@
 <template>
   <section class="detail-page">
-    <div v-if="loading" class="state-card">
-      Cargando publicacion...
+    <div
+      v-if="loading"
+      class="state-card loading-state"
+    >
+      <span class="spinner" aria-hidden="true"></span>
+      <span>Cargando publicación...</span>
     </div>
 
     <div v-else-if="error" class="state-card state-card--error">
@@ -190,9 +194,13 @@
           para crear hilos o agregar comentarios.
         </p>
 
-        <p v-if="threadsLoading" class="comments-state">
-          Cargando comentarios...
-        </p>
+        <div
+          v-if="threadsLoading"
+          class="comments-state loading-state"
+        >
+          <span class="spinner" aria-hidden="true"></span>
+          <span>Cargando comentarios...</span>
+        </div>
 
         <div
           v-else-if="threadsError"
@@ -889,6 +897,28 @@ onMounted(loadView)
 
 .state-card--error {
   color: #991b1b;
+}
+
+.loading-state {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.spinner {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .detail-header {
