@@ -542,7 +542,7 @@ onMounted(async () => {
 .eyebrow {
   font-size: 0.8rem;
   font-weight: bold;
-  color: #64748b;
+  color: var(--text-secondary);
 }
 
 

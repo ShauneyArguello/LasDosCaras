@@ -450,7 +450,7 @@ onMounted(() => {
 
 .date {
   flex: 0 0 auto;
-  color: #94a3b8;
+  color: #cbd5e1;
   font-size: 0.85rem;
 }
 

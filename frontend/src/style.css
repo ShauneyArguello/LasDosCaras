@@ -5,7 +5,7 @@
   --sidebar-bg: #f6f8fb;
   --border: #d7dee8;
   --text-primary: #172033;
-  --text-secondary: #5d687a;
+  --text-secondary: #3f4f66;
   --accent: #2563eb;
   --accent-strong: #1d4ed8;
   --shadow-sm: 0 8px 20px rgba(23, 32, 51, 0.08);
@@ -26,7 +26,7 @@
   --sidebar-bg: #151f31;
   --border: #30415e;
   --text-primary: #f8fafc;
-  --text-secondary: #b6c2d2;
+  --text-secondary: #d7e0ed;
   --accent: #3b82f6;
   --accent-strong: #60a5fa;
   --shadow-sm: 0 8px 20px rgba(0, 0, 0, 0.28);
@@ -47,6 +47,17 @@ input,
 select,
 textarea {
   font: inherit;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #59677a;
+  opacity: 1;
+}
+
+:root[data-theme='dark'] input::placeholder,
+:root[data-theme='dark'] textarea::placeholder {
+  color: #cbd5e1;
 }
 
 #app {

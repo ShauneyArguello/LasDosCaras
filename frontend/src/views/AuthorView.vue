@@ -319,7 +319,7 @@ onMounted(() => {
 
 .eyebrow {
   margin-bottom: 6px;
-  color: #64748b;
+  color: var(--text-secondary);
   font-size: 0.8rem;
   font-weight: bold;
   letter-spacing: 1px;
@@ -334,7 +334,7 @@ onMounted(() => {
   display: flex;
   flex-wrap: wrap;
   gap: 20px;
-  color: #94a3b8;
+  color: var(--text-secondary);
 }
 
 .publications-section h2 {
@@ -378,7 +378,7 @@ onMounted(() => {
 }
 
 .view-date {
-  color: #94a3b8;
+  color: var(--text-secondary);
   font-size: 0.85rem;
 }
 

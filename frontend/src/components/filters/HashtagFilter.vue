@@ -92,7 +92,7 @@ function selectHashtag(
 }
 
 .hashtag-filter input::placeholder {
-  color: #94a3b8;
+  color: #cbd5e1;
 }
 
 .hashtag-filter input:focus {

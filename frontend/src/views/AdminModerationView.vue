@@ -599,13 +599,13 @@ onMounted(() => {
 
 .eyebrow {
   margin-bottom: 6px;
-  color: #64748b;
+  color: var(--text-secondary);
   font-size: 0.8rem;
   font-weight: bold;
 }
 
 .description {
-  color: #64748b;
+  color: var(--text-secondary);
 }
 
 .filters {
