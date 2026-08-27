@@ -192,6 +192,56 @@
       </button>
     </nav>
 
+    <div
+      v-if="pendingUserAction"
+      class="modal-backdrop"
+      role="presentation"
+      @click.self="closeUserDialog"
+    >
+      <section
+        class="confirm-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="user-dialog-title"
+      >
+        <p class="dialog-eyebrow">
+          Usuarios
+        </p>
+
+        <h2 id="user-dialog-title">
+          {{ userDialogTitle }}
+        </h2>
+
+        <p>
+          {{ userDialogMessage }}
+        </p>
+
+        <div class="dialog-actions">
+          <button
+            type="button"
+            class="cancel-button"
+            :disabled="Boolean(actionLoading)"
+            @click="closeUserDialog"
+          >
+            Cancelar
+          </button>
+
+          <button
+            type="button"
+            :class="userDialogActionClass"
+            :disabled="Boolean(actionLoading)"
+            @click="applyUserAction"
+          >
+            {{
+              actionLoading
+                ? 'Procesando...'
+                : userDialogActionLabel
+            }}
+          </button>
+        </div>
+      </section>
+    </div>
+
   </section>
 </template>
 
@@ -251,6 +301,16 @@ const messageType =
     'success'
   )
 
+type UserAction =
+  'ban' |
+  'unban'
+
+const pendingUserAction =
+  ref<{
+    user: AdminUser
+    action: UserAction
+  } | null>(null)
+
 
 const totalPages =
   computed(() => {
@@ -261,6 +321,52 @@ const totalPages =
         pageSize
       )
     )
+  })
+
+const userDialogTitle =
+  computed(() => {
+    if (!pendingUserAction.value) {
+      return ''
+    }
+
+    return pendingUserAction.value.action === 'ban'
+      ? 'Banear usuario'
+      : 'Desbanear usuario'
+  })
+
+
+const userDialogMessage =
+  computed(() => {
+    if (!pendingUserAction.value) {
+      return ''
+    }
+
+    const userName =
+      pendingUserAction.value.user.name
+
+    return pendingUserAction.value.action === 'ban'
+      ? `El usuario "${userName}" quedará suspendido.`
+      : `El usuario "${userName}" volverá a estar activo.`
+  })
+
+
+const userDialogActionLabel =
+  computed(() => {
+    if (!pendingUserAction.value) {
+      return ''
+    }
+
+    return pendingUserAction.value.action === 'ban'
+      ? 'Banear'
+      : 'Desbanear'
+  })
+
+
+const userDialogActionClass =
+  computed(() => {
+    return pendingUserAction.value?.action === 'ban'
+      ? 'ban-button'
+      : 'unban-button'
   })
 
 
@@ -382,7 +488,7 @@ async function searchUsers() {
 }
 
 
-async function confirmBan(
+function confirmBan(
   user: AdminUser
 ) {
 
@@ -398,95 +504,88 @@ async function confirmBan(
     return
   }
 
-  const confirmed =
-    window.confirm(
-      `¿Deseas banear a ${user.name}?`
-    )
-
-  if (!confirmed) {
-    return
-  }
-
-  actionLoading.value =
-    user.id
-
-  try {
-
-    const updatedUser = await banUser(
-      user.id
-    )
-
-    users.value = users.value.map(item =>
-      item.id === updatedUser.id ? updatedUser : item
-    )
-
-    showMessage(
-      'Usuario baneado correctamente.',
-      'success'
-    )
-
-  } catch (err) {
-
-    console.error(
-      'Error baneando usuario:',
-      err
-    )
-
-    showMessage(
-      'No se pudo banear el usuario.',
-      'error'
-    )
-
-  } finally {
-
-    actionLoading.value =
-      ''
-
+  pendingUserAction.value = {
+    user,
+    action: 'ban',
   }
 
 }
 
 
-async function confirmUnban(
+function confirmUnban(
   user: AdminUser
 ) {
 
-  const confirmed =
-    window.confirm(
-      `¿Deseas desbanear a ${user.name}?`
-    )
+  pendingUserAction.value = {
+    user,
+    action: 'unban',
+  }
 
-  if (!confirmed) {
+}
+
+
+function closeUserDialog() {
+
+  if (actionLoading.value) {
     return
   }
+
+  pendingUserAction.value =
+    null
+
+}
+
+
+async function applyUserAction() {
+
+  if (!pendingUserAction.value) {
+    return
+  }
+
+  const {
+    user,
+    action,
+  } = pendingUserAction.value
 
   actionLoading.value =
     user.id
 
   try {
 
-    const updatedUser = await unbanUser(
-      user.id
-    )
+    const updatedUser =
+      action === 'ban'
+        ? await banUser(
+          user.id
+        )
+        : await unbanUser(
+          user.id
+        )
 
     users.value = users.value.map(item =>
       item.id === updatedUser.id ? updatedUser : item
     )
 
     showMessage(
-      'Usuario desbaneado correctamente.',
+      action === 'ban'
+        ? 'Usuario baneado correctamente.'
+        : 'Usuario desbaneado correctamente.',
       'success'
     )
+
+    pendingUserAction.value =
+      null
 
   } catch (err) {
 
     console.error(
-      'Error desbaneando usuario:',
+      'Error actualizando usuario:',
       err
     )
 
     showMessage(
-      'No se pudo desbanear el usuario.',
+      action === 'ban'
+        ? 'No se pudo banear el usuario.'
+        : 'No se pudo desbanear el usuario.',
       'error'
     )
 
@@ -498,6 +597,8 @@ async function confirmUnban(
   }
 
 }
+
+
 
 
 async function previousPage() {
@@ -691,9 +792,19 @@ th {
   background: #16a34a;
 }
 
+.cancel-button {
+  padding: 8px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: white;
+  color: #334155;
+  cursor: pointer;
+}
+
 
 .ban-button:disabled,
-.unban-button:disabled {
+.unban-button:disabled,
+.cancel-button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
@@ -747,6 +858,56 @@ th {
 }
 
 
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgb(15 23 42 / 0.55);
+}
+
+
+.confirm-dialog {
+  width: min(100%, 460px);
+  padding: 24px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: 0 24px 60px rgb(15 23 42 / 0.24);
+}
+
+
+.confirm-dialog h2 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 24px;
+}
+
+
+.confirm-dialog p {
+  color: var(--text-secondary);
+}
+
+
+.dialog-eyebrow {
+  margin: 0 0 8px;
+  color: var(--accent);
+  font-size: 0.8rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 22px;
+}
+
+
 @media (max-width: 768px) {
 
   .search-section {
@@ -756,6 +917,11 @@ th {
 
   .page-header h1 {
     font-size: 26px;
+  }
+
+  .dialog-actions {
+    align-items: stretch;
+    flex-direction: column;
   }
 
 }
