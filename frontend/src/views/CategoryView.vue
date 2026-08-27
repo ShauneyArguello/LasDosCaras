@@ -17,9 +17,15 @@
     </nav>
 
     <!-- Cargando categoría -->
-    <p v-if="loadingCategory">
-      Cargando categoría...
-    </p>
+    <div
+      v-if="loadingCategory"
+      class="loading-state"
+      role="status"
+      aria-live="polite"
+    >
+      <span class="spinner" aria-hidden="true"></span>
+      <span>Cargando categoría...</span>
+    </div>
 
     <!-- Error al cargar categoría -->
     <div v-else-if="categoryError">
@@ -75,9 +81,15 @@
       </section>
 
       <!-- Cargando publicaciones -->
-      <p v-if="loadingViews">
-        Cargando publicaciones...
-      </p>
+      <div
+        v-if="loadingViews"
+        class="loading-state"
+        role="status"
+        aria-live="polite"
+      >
+        <span class="spinner" aria-hidden="true"></span>
+        <span>Cargando publicaciones...</span>
+      </div>
 
       <!-- Error de publicaciones -->
       <div v-else-if="viewsError">
@@ -531,6 +543,31 @@ onMounted(async () => {
   font-size: 0.8rem;
   font-weight: bold;
   color: #64748b;
+}
+
+
+.loading-state {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+
+.spinner {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 
