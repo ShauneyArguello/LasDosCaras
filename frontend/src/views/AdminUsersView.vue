@@ -47,9 +47,15 @@
       {{ message }}
     </p>
 
-    <p v-if="loading">
-      Cargando usuarios...
-    </p>
+    <div
+      v-if="loading"
+      class="loading-state"
+      role="status"
+      aria-live="polite"
+    >
+      <span class="spinner" aria-hidden="true"></span>
+      <span>Cargando usuarios...</span>
+    </div>
 
     <div
       v-else-if="error"
@@ -591,6 +597,31 @@ onMounted(() => {
   background: #2563eb;
   color: white;
   cursor: pointer;
+}
+
+
+.loading-state {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+
+.spinner {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 
