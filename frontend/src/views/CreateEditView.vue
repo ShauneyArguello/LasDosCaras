@@ -8,8 +8,14 @@
       </p>
     </div>
 
-    <div v-if="isLoading" class="state-card" role="status" aria-live="polite">
-      Cargando formulario...
+    <div
+      v-if="isLoading"
+      class="state-card loading-state"
+      role="status"
+      aria-live="polite"
+    >
+      <span class="spinner" aria-hidden="true"></span>
+      <span>Cargando formulario...</span>
     </div>
 
     <div
@@ -1036,6 +1042,28 @@ onMounted(loadInitialData)
 
 .state-card--error {
   color: #991b1b;
+}
+
+.loading-state {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.spinner {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .form-grid {
