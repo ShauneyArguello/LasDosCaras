@@ -488,6 +488,23 @@ const fieldErrors = reactive({
   hashtags: '',
 })
 
+type FieldErrorKey = keyof typeof fieldErrors
+
+const apiFieldMappings: Record<FieldErrorKey, string[]> = {
+  title: ['title'],
+  categoryId: ['categoryId', 'category.id', 'category'],
+  sideTitle: ['side.title', 'sideTitle'],
+  sideDescription: ['side.description', 'sideDescription'],
+  sideSources: ['side.sources', 'sideSources', 'sources'],
+  counterpartTitle: ['counterpart.title', 'counterpartTitle'],
+  counterpartDescription: [
+    'counterpart.description',
+    'counterpartDescription',
+  ],
+  counterpartSources: ['counterpart.sources', 'counterpartSources'],
+  hashtags: ['hashtags'],
+}
+
 const titleCount = computed(() => form.title.length)
 const submitButtonText = computed(() => {
   if (isSubmitting.value) return 'Guardando...'
@@ -517,6 +534,61 @@ function resetFieldErrors() {
   fieldErrors.counterpartSources = ''
   fieldErrors.hashtags = ''
   submitError.value = ''
+}
+
+function firstApiError(value: unknown): string {
+  if (Array.isArray(value)) {
+    return firstApiError(value[0])
+  }
+
+  if (typeof value === 'string') {
+    return value
+  }
+
+  if (value && typeof value === 'object') {
+    const record = value as Record<string, unknown>
+
+    return firstApiError(record.message ?? record._errors)
+  }
+
+  return ''
+}
+
+function getApiErrorAtPath(
+  errors: Record<string, unknown>,
+  path: string
+): string {
+  if (Object.prototype.hasOwnProperty.call(errors, path)) {
+    return firstApiError(errors[path])
+  }
+
+  const nestedValue = path.split('.').reduce<unknown>((current, key) => {
+    if (!current || typeof current !== 'object') return undefined
+
+    return (current as Record<string, unknown>)[key]
+  }, errors)
+
+  return firstApiError(nestedValue)
+}
+
+function applyApiFieldErrors(errors: unknown) {
+  if (!errors || typeof errors !== 'object') return false
+
+  let hasFieldError = false
+  const apiErrors = errors as Record<string, unknown>
+
+  Object.entries(apiFieldMappings).forEach(([field, paths]) => {
+    const message =
+      paths.map((path) => getApiErrorAtPath(apiErrors, path)).find(Boolean) ??
+      ''
+
+    if (message) {
+      fieldErrors[field as FieldErrorKey] = message
+      hasFieldError = true
+    }
+  })
+
+  return hasFieldError
 }
 
 function normalizeTag(tag: string) {
@@ -800,8 +872,24 @@ function applySubmitError(error: unknown) {
   const data = error.response?.data
 
   if (status === 400 || status === 422) {
+    resetFieldErrors()
+
+    const apiFields =
+      data?.details?.fieldErrors ??
+      data?.fieldErrors ??
+      data?.errors ??
+      {}
+    const hasFieldErrors = applyApiFieldErrors(apiFields)
+
     submitError.value =
-      data?.error ?? 'Revisa los datos del formulario.'
+      hasFieldErrors
+        ? 'Revisa los campos indicados en el formulario.'
+        : data?.message ?? data?.error ?? 'Revisa los datos del formulario.'
+
+    if (hasFieldErrors) {
+      scrollToFirstError()
+    }
+
     return
   }
 
