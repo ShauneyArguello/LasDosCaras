@@ -174,3 +174,26 @@ frontend/
 - `feature/*`: ramas de funcionalidades y correcciones.
 - Los cambios se integran mediante Pull Requests.
 - Los commits usan convenciones como `feat:`, `fix:`, `docs:`, `refactor:` y `style:`.
+
+# Capturas de pantalla
+
+## Captura 1
+![Captura 1](frontend/docs/screenshots/imgFrontend.jpeg)
+
+## Captura 2
+![Captura 2](frontend/docs/screenshots/imgFrontend1.jpeg)
+
+## Captura 3
+![Captura 3](frontend/docs/screenshots/imgFrontend2.jpeg)
+
+## Captura 4
+![Captura 4](frontend/docs/screenshots/imgFrontend3.jpeg)
+
+## Captura 5
+![Captura 5](frontend/docs/screenshots/imgFrontend4.jpeg)
+
+## Captura 6
+![Captura 6](frontend/docs/screenshots/imgFrontend5.jpeg)
+
+## Captura 7
+![Captura 7](frontend/docs/screenshots/imgFrontend6.jpeg)
