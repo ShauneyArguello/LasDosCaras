@@ -1,0 +1,64 @@
+### Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+### Build / Output
+dist/
+build/
+out/
+coverage/
+coverage-final.json
+*.tsbuildinfo
+
+### Environment
+.env
+.env.*.local
+.env.local
+.env.test
+.env.production
+
+### Logs
+logs/
+*.log
+pids/
+*.pid
+
+### IDEs and OS
+.vscode/
+.idea/
+.DS_Store
+
+### Docker
+docker-compose.override.yml
+
+### Prisma
+prisma/dev.db
+*.db
+
+### Uploads and runtime files
+tmp/
+.cache/
+
+### Security / misc
+*.pem
+*.key
+*.crt
+
+# API / Backend - no subir al repositorio
+/src/
+/prisma/
+/postman/
+/uploads/
+/doscaras/
+
+/Dockerfile
+/docker-compose.yml
+/docker-entrypoint.sh
+/package.json
+/package-lock.json
+/tsconfig.json
+
+# Archivos generados en la raiz
+/.vite/
